@@ -448,7 +448,7 @@ func TestLiveCreateRefund(t *testing.T) {
 
 	replay := l.call(t, "create_refund", partial)
 	if id(replay) != id(r) {
-		t.Errorf("replay with the same idempotency key created refund %s, want %s", id(replay), id(r))
+		t.Fatalf("replay with the same idempotency key created refund %s, want %s", id(replay), id(r))
 	}
 
 	r = l.call(t, "create_refund", map[string]any{"charge": charge})
