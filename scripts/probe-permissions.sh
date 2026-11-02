@@ -2,28 +2,24 @@
 # Probes which Stripe endpoints the org key can reach without modifying account data.
 #
 # Usage: probe-permissions.sh [acct_…]
-#   The account defaults to $STRIPE_PROBE_ACCOUNT, then to the Digital Vibes sandbox account.
+#   The account defaults to $STRIPE_TEST_ACCOUNT, which only the fnox cloud profile sets. Account IDs
+#   stay out of this public repo, so anywhere else pass the account as an argument.
 #   STRIPE_ORG_KEY must be set, e.g. via `fnox exec -- scripts/probe-permissions.sh`.
 set -euo pipefail
 
 readonly API="https://api.stripe.com"
 readonly STRIPE_VERSION="2026-10-28.endive"
 readonly PREVIEW_VERSION="2026-10-28.preview"
-readonly SANDBOX_ACCOUNT="acct_1UXK5KLrLJZ2Yv7l"
 
 if [[ -z "${STRIPE_ORG_KEY:-}" ]]; then
 	echo "STRIPE_ORG_KEY is not set; run via 'fnox exec -- $0' or 'mise run probe'" >&2
 	exit 2
 fi
 
-account="${1:-${STRIPE_PROBE_ACCOUNT:-}}"
+account="${1:-${STRIPE_TEST_ACCOUNT:-}}"
 if [[ -z "$account" ]]; then
-	# The sandbox account doesn't exist under a live key, and live IDs stay out of this repo.
-	if [[ "$STRIPE_ORG_KEY" == sk_org_live_* ]]; then
-		echo "live key: pass an account, e.g. 'mise run probe -P production acct_…'" >&2
-		exit 2
-	fi
-	account="$SANDBOX_ACCOUNT"
+	echo "no account: pass one, e.g. 'mise run probe acct_…', or set STRIPE_TEST_ACCOUNT" >&2
+	exit 2
 fi
 if [[ ! "$account" =~ ^acct_[A-Za-z0-9]+$ ]]; then
 	echo "invalid account ID: $account" >&2
