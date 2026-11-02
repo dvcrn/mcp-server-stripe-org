@@ -349,6 +349,9 @@ func fakeSchemas(t *testing.T, calls *[]stripeCall) http.HandlerFunc {
 				`{"name":"id","type":"varchar","description":"Unique identifier.","is_primary_key":true,"foreign_keys_to":[]},` +
 				`{"name":"customer_id","type":"varchar","description":"The  customer.","is_primary_key":false,"foreign_keys_to":[{"column":"id","schema":"schema_dummy","schema_name":"customers"}]}` +
 				`]}],"next_page_url":null}`
+		case q.Get("name") == "charge":
+			// A loose filter answering a prefix with a different table.
+			body = `{"data":[{"name":"charges","description":"Charge objects.","columns":[]}],"next_page_url":null}`
 		case q.Has("name"):
 			body = `{"data":[],"next_page_url":null}`
 		case q.Get("page") == "page_dummy2":
@@ -398,6 +401,7 @@ func TestListQueryTablesColumns(t *testing.T) {
 	}
 
 	wantError(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"charges", "nope"}}), "unknown tables nope")
+	wantError(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"charge"}}), "unknown tables charge;")
 	wantError(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"a", "b", "c", "d", "e", "f"}}), "at most 5 tables")
 	calls = nil
 	wantError(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"charges", " "}}), "must not be empty")

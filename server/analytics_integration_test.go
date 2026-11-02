@@ -127,4 +127,6 @@ func TestLiveListQueryTables(t *testing.T) {
 	}
 
 	t.Logf("%.300s", got)
+
+	wantError(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"charge"}}), "unknown tables charge;")
 }
