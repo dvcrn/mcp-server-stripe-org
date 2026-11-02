@@ -147,7 +147,7 @@ func TestToolsRegistered(t *testing.T) {
 	}
 
 	slices.Sort(names)
-	want := []string{"api_read", "get_api_operation", "list_accounts", "search_api_operations"}
+	want := []string{"api_read", "get_api_operation", "get_query_run", "list_accounts", "list_query_tables", "run_sql_query", "search_api_operations"}
 	if !slices.Equal(names, want) {
 		t.Errorf("tools = %v, want %v", names, want)
 	}

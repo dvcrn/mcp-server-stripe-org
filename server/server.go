@@ -58,6 +58,29 @@ func tools(s *mcp.Server) {
 			"Page /v1 lists with params.starting_after and /v2 lists with params.page from next_page_url.",
 		Annotations: readOnly(),
 	}, apiRead)
+
+	add(s, &mcp.Tool{
+		Name: "run_sql_query",
+		Description: "Run a read-only Stripe Sigma SQL query (Trino dialect) and return the first 100 rows as CSV; page through the rest with get_query_run. " +
+			"Find tables and columns with list_query_tables. Without `account` the query covers every account in the organization. " +
+			"Queries often take 30 s or more; if the run has not finished within 10 s this returns its query_run_id and status for get_query_run. " +
+			"Rerunning an identical query reuses the earlier run.",
+		Annotations: readOnly(),
+	}, runSQLQuery)
+
+	add(s, &mcp.Tool{
+		Name: "get_query_run",
+		Description: "Check a run_sql_query run and return its rows as CSV once it has succeeded. " +
+			"Pass the same `account` the query ran with. Page through results with `page` from next_page.",
+		Annotations: readOnly(),
+	}, getQueryRun)
+
+	add(s, &mcp.Tool{
+		Name: "list_query_tables",
+		Description: "List the tables run_sql_query can read, with a one-line description each. " +
+			"Pass `tables` to get those tables' columns, types, keys and usage notes.",
+		Annotations: readOnly(),
+	}, listQueryTables)
 }
 
 // add registers a tool whose handler receives the request's Env. An Out of
