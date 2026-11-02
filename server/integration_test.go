@@ -26,7 +26,12 @@ func (b bearerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 // STRIPE_ACCOUNTS with at least two sandbox accounts, for example via fnox exec.
 func TestLiveAPIReadBalance(t *testing.T) {
 	var accounts []Account
-	json.Unmarshal([]byte(os.Getenv(EnvAccounts)), &accounts)
+	if raw := os.Getenv(EnvAccounts); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &accounts); err != nil {
+			t.Fatalf("%s does not parse: %v", EnvAccounts, err)
+		}
+	}
+
 	if os.Getenv(EnvOrgKey) == "" || len(accounts) < 2 {
 		t.Skip("STRIPE_ORG_KEY and STRIPE_ACCOUNTS with two accounts must be set")
 	}

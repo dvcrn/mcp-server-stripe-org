@@ -44,22 +44,17 @@ func apiRead(ctx context.Context, env *Env, in apiReadInput) (*mcp.CallToolResul
 		return nil, nil, err
 	}
 
+	account := ""
+	if in.Account != "" || !op.IsV2() {
+		if account, err = env.resolveAccount(in.Account); err != nil {
+			return nil, nil, err
+		}
+	}
+
 	var body []byte
 	if op.IsV2() {
-		account := ""
-		if in.Account != "" {
-			if account, err = env.resolveAccount(in.Account); err != nil {
-				return nil, nil, err
-			}
-		}
-
 		body, err = env.Client.DoV2(ctx, stripe.V2Request{Method: http.MethodGet, Path: path, Account: account, Query: params})
 	} else {
-		account, resolveErr := env.resolveAccount(in.Account)
-		if resolveErr != nil {
-			return nil, nil, resolveErr
-		}
-
 		body, err = env.Client.DoV1(ctx, stripe.V1Request{Method: http.MethodGet, Path: path, Account: account, Params: params})
 	}
 
@@ -70,7 +65,7 @@ func apiRead(ctx context.Context, env *Env, in apiReadInput) (*mcp.CallToolResul
 	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(body)}}}, nil, nil
 }
 
-// queryParams keeps only the parameters op declares, checks required ones
+// queryParams rejects parameters op does not declare, checks required ones
 // and applies the default and maximum limit.
 func queryParams(op stripe.Operation, in map[string]any) (map[string]any, error) {
 	params := maps.Clone(in)
@@ -126,8 +121,8 @@ func queryParamsOf(op stripe.Operation) []stripe.Param {
 	return params
 }
 
-// isEmpty reports values the form encoder would drop, so a required
-// parameter given as "" or [] fails here with a clear message.
+// isEmpty reports values that leave a required parameter effectively unset:
+// nil, "", or an empty list or object.
 func isEmpty(v any) bool {
 	switch v := v.(type) {
 	case nil:

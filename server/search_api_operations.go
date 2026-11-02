@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -31,6 +33,10 @@ type searchAPIOperationsOutput struct {
 }
 
 func searchAPIOperations(_ context.Context, _ *Env, in searchAPIOperationsInput) (*mcp.CallToolResult, searchAPIOperationsOutput, error) {
+	if strings.TrimSpace(in.Query) == "" {
+		return nil, searchAPIOperationsOutput{}, errors.New(`query is required, e.g. "list invoices"`)
+	}
+
 	limit := in.Limit
 	if limit <= 0 {
 		limit = defaultSearchLimit

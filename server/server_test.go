@@ -221,6 +221,10 @@ func TestSearchAPIOperations(t *testing.T) {
 		t.Errorf("got %d results, want %d", len(out.Operations), maxSearchLimit)
 	}
 
+	for _, q := range []string{"", "   "} {
+		wantError(t, call(t, cs, "search_api_operations", map[string]any{"query": q}), "query is required")
+	}
+
 	out = structured[searchAPIOperationsOutput](t, call(t, cs, "search_api_operations", map[string]any{"query": "zzzznothing"}))
 	if len(out.Operations) != 0 || out.Note == "" {
 		t.Errorf("want no results and a note, got %+v", out)
