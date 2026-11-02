@@ -416,12 +416,14 @@ func TestListQueryTablesStripsHostNotes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cs := connect(t, "sk_org_test_dummy", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(fixture)
-	})
+	var calls []stripeCall
+	cs := connect(t, "sk_org_test_dummy", recordStripe(&calls, string(fixture)))
 
 	got := wantOK(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"charges"}}))
+	if len(calls) != 1 || calls[0] != (stripeCall{schemasPath, "include%5B0%5D=columns&name=charges", ""}) {
+		t.Errorf("calls = %+v", calls)
+	}
+
 	for _, m := range hostOnlyMarkers {
 		if strings.Contains(got, m) {
 			t.Errorf("output mentions %s:\n%s", m, got)

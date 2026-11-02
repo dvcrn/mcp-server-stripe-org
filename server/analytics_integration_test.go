@@ -122,7 +122,7 @@ func TestLiveListQueryTables(t *testing.T) {
 
 	for _, m := range hostOnlyMarkers {
 		if strings.Contains(got, m) {
-			t.Errorf("charges notes mention %s:\n%.2000s", m, got)
+			t.Errorf("charges output mentions %s:\n%.2000s", m, got)
 		}
 	}
 
