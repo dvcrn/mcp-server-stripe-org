@@ -3,3 +3,4 @@ fnox.local.toml
 build/
 node_modules/
 .wrangler/
+mise.local.toml

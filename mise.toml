@@ -2,8 +2,8 @@
 go = "1.26.3"
 wrangler = "4.156.1"
 
-[env]
-CLOUDFLARE_ACCOUNT_ID = "02c07a2514d9a25f58c78a180bb8c6f3"
+# CLOUDFLARE_ACCOUNT_ID comes from fnox.cloud.toml (cloud profile) in cloud sessions
+# and from the gitignored mise.local.toml on local machines.
 
 [tasks.build-worker]
 description = "Build the Cloudflare Workers bundle into build/"
