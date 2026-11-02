@@ -297,6 +297,43 @@ func TestGetQueryRunPaging(t *testing.T) {
 	}
 }
 
+func TestGetQueryRunLimit(t *testing.T) {
+	for _, tc := range []struct {
+		limit   any
+		want    string
+		wantErr string
+	}{
+		{nil, "limit=100", ""},
+		{50, "limit=50", ""},
+		{101, "limit=100", ""},
+		{0, "", "limit must be at least 1 (default 100, max 100), got 0"},
+		{-1, "", "limit must be at least 1"},
+	} {
+		f := &fakeQueryRuns{t: t, finalStatus: statusSucceeded}
+		cs := connect(t, "sk_org_test_dummy", f.ServeHTTP)
+
+		args := map[string]any{"query_run_id": fakeRunID}
+		if tc.limit != nil {
+			args["limit"] = tc.limit
+		}
+
+		res := call(t, cs, "get_query_run", args)
+		if tc.wantErr != "" {
+			wantError(t, res, tc.wantErr)
+			if len(f.reads) != 0 {
+				t.Errorf("limit %v: sent %d requests", tc.limit, len(f.reads))
+			}
+
+			continue
+		}
+
+		wantOK(t, res)
+		if want := "include%5B0%5D=result.inline&" + tc.want; len(f.reads) != 1 || f.reads[0].query != want {
+			t.Errorf("limit %v: reads = %+v, want query %s", tc.limit, f.reads, want)
+		}
+	}
+}
+
 func TestGetQueryRunRunning(t *testing.T) {
 	f := &fakeQueryRuns{t: t, pollsUntilDone: 1 << 30}
 	cs := connect(t, "sk_org_test_dummy", f.ServeHTTP)
@@ -318,8 +355,6 @@ func TestGetQueryRunErrors(t *testing.T) {
 	}{
 		{map[string]any{"query_run_id": "../v1/files"}, "not a qrun_ ID"},
 		{map[string]any{"query_run_id": ""}, "not a qrun_ ID"},
-		{map[string]any{"query_run_id": fakeRunID, "limit": -1}, "limit must be between 1 and 100"},
-		{map[string]any{"query_run_id": fakeRunID, "limit": 101}, "limit must be between 1 and 100"},
 		{map[string]any{"query_run_id": fakeRunID, "account": "nope"}, "unknown account"},
 	} {
 		wantError(t, call(t, cs, "get_query_run", tc.args), tc.want)

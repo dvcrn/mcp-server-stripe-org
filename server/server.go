@@ -54,7 +54,7 @@ func tools(s *mcp.Server) {
 		Description: "Call a Stripe GET operation by its operation ID and return the raw JSON response. " +
 			"Find IDs with search_api_operations and parameters with get_api_operation. " +
 			"`account` is required for /v1 operations; /v2 operations without it run across the whole organization. " +
-			"List operations return 10 items unless params.limit is set (max 100). " +
+			"List operations take params.limit (default 10, max 100). " +
 			"Page /v1 lists with params.starting_after and /v2 lists with params.page from next_page_url.",
 		Annotations: readOnly(),
 	}, apiRead)

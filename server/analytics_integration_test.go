@@ -102,6 +102,25 @@ func TestLiveRunSQLQuery(t *testing.T) {
 		if !strings.Contains(got, "status: succeeded\n") || !strings.HasSuffix(got, "\n\none\n1\n") {
 			t.Errorf("account set %v: want one row with 1, got:\n%s", account != "", got)
 		}
+
+		// A limit above the maximum is capped to one Stripe accepts.
+		args := map[string]any{"query_run_id": queryRunIDLine.FindStringSubmatch(got)[1], "limit": 1000}
+		if account != "" {
+			args["account"] = account
+		}
+
+		if got := wantOK(t, call(t, cs, "get_query_run", args)); !strings.HasSuffix(got, "\n\none\n1\n") {
+			t.Errorf("account set %v: limit 1000: want one row with 1, got:\n%s", account != "", got)
+		}
+	}
+}
+
+func TestLiveAPIReadLimitCapped(t *testing.T) {
+	cs, accounts := liveSession(t)
+
+	got := wantOK(t, call(t, cs, "api_read", map[string]any{"operation_id": "GetCustomers", "account": accounts[0].Alias, "params": map[string]any{"limit": 1000}}))
+	if !strings.Contains(got, `"object": "list"`) {
+		t.Errorf("want a customer list, got:\n%.500s", got)
 	}
 }
 

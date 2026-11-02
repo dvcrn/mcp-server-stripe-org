@@ -220,11 +220,6 @@ func TestSearchAPIOperations(t *testing.T) {
 		t.Errorf("got %d results, want at most %d", len(out.Operations), defaultSearchLimit)
 	}
 
-	out = structured[searchAPIOperationsOutput](t, call(t, cs, "search_api_operations", map[string]any{"query": "a", "limit": 1000}))
-	if len(out.Operations) != maxSearchLimit {
-		t.Errorf("got %d results, want %d", len(out.Operations), maxSearchLimit)
-	}
-
 	for _, q := range []string{"", "   "} {
 		wantError(t, call(t, cs, "search_api_operations", map[string]any{"query": q}), "query is required")
 	}
@@ -324,14 +319,51 @@ func TestAPIReadAccountByID(t *testing.T) {
 	}
 }
 
+func TestSearchAPIOperationsLimit(t *testing.T) {
+	cs := connect(t, "sk_org_test_dummy", noStripe(t))
+
+	for _, tc := range []struct {
+		limit   any
+		want    int
+		wantErr string
+	}{
+		{nil, defaultSearchLimit, ""},
+		{25, 25, ""},
+		{1000, maxSearchLimit, ""},
+		{0, 0, "limit must be at least 1 (default 10, max 50), got 0"},
+		{-1, 0, "limit must be at least 1"},
+	} {
+		args := map[string]any{"query": "a"}
+		if tc.limit != nil {
+			args["limit"] = tc.limit
+		}
+
+		res := call(t, cs, "search_api_operations", args)
+		if tc.wantErr != "" {
+			wantError(t, res, tc.wantErr)
+			continue
+		}
+
+		if out := structured[searchAPIOperationsOutput](t, res); len(out.Operations) != tc.want {
+			t.Errorf("limit %v: got %d results, want %d", tc.limit, len(out.Operations), tc.want)
+		}
+	}
+}
+
 func TestAPIReadLimit(t *testing.T) {
 	for _, tc := range []struct {
-		limit any
-		want  string
+		limit   any
+		want    string
+		wantErr string
 	}{
-		{nil, "limit=10"},
-		{25, "limit=25"},
-		{1000, "limit=100"},
+		{nil, "limit=10", ""},
+		{25, "limit=25", ""},
+		{1000, "limit=100", ""},
+		{1e300, "limit=100", ""},
+		{0, "", "limit must be at least 1 (default 10, max 100), got 0"},
+		{-5, "", "limit must be at least 1"},
+		{2.5, "", "limit must be a whole number"},
+		{"5", "", "limit must be a whole number"},
 	} {
 		var calls []stripeCall
 		cs := connect(t, "sk_org_test_dummy", recordStripe(&calls, `{"object":"list","data":[]}`))
@@ -341,8 +373,17 @@ func TestAPIReadLimit(t *testing.T) {
 			params["limit"] = tc.limit
 		}
 
-		wantOK(t, call(t, cs, "api_read", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": params}))
+		res := call(t, cs, "api_read", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": params})
+		if tc.wantErr != "" {
+			wantError(t, res, tc.wantErr)
+			if len(calls) != 0 {
+				t.Errorf("limit %v: sent %d requests", tc.limit, len(calls))
+			}
 
+			continue
+		}
+
+		wantOK(t, res)
 		if len(calls) != 1 || calls[0].query != tc.want {
 			t.Errorf("limit %v: calls = %+v, want query %s", tc.limit, calls, tc.want)
 		}
@@ -395,9 +436,6 @@ func TestAPIReadErrors(t *testing.T) {
 		{"bracket nested key", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"created": map[string]any{"gt][x": 1}}}, "invalid key"},
 		{"page on v1", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"page": "x"}}, `does not accept query parameter "page"`},
 		{"page on v2 item", map[string]any{"operation_id": "GetV2CoreAccountsId", "path_params": map[string]any{"id": "x"}, "params": map[string]any{"page": "x"}}, `does not accept query parameter "page"`},
-		{"zero limit", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"limit": 0}}, "whole number"},
-		{"fractional limit", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"limit": 2.5}}, "whole number"},
-		{"string limit", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"limit": "5"}}, "whole number"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			wantError(t, call(t, cs, "api_read", tc.args), tc.want)
