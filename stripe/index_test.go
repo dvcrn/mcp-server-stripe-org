@@ -144,3 +144,59 @@ func ids(ops []Operation) []string {
 
 	return out
 }
+
+func TestBuildPath(t *testing.T) {
+	op, _ := LookupOperation("GetV2CoreAccountsAccountIdPersonsId")
+
+	got, err := op.BuildPath(map[string]string{"account_id": "acct_DUMMY", "id": "person_dummy-1"})
+	if err != nil || got != "/v2/core/accounts/acct_DUMMY/persons/person_dummy-1" {
+		t.Errorf("got %q, %v", got, err)
+	}
+
+	for _, params := range []map[string]string{
+		nil,
+		{"account_id": "acct_DUMMY"},
+		{"account_id": "acct_DUMMY", "id": ""},
+		{"account_id": "acct_DUMMY", "id": ".."},
+		{"account_id": "acct_DUMMY", "id": "a/b"},
+		{"account_id": "acct_DUMMY", "id": "a%2Fb"},
+		{"account_id": "acct_DUMMY", "id": "a?b"},
+		{"account_id": "acct_DUMMY", "id": "a b"},
+		{"account_id": "acct_DUMMY", "id": "x", "extra": "y"},
+	} {
+		if got, err := op.BuildPath(params); err == nil {
+			t.Errorf("%v: accepted as %q", params, got)
+		}
+	}
+
+	balance, _ := LookupOperation("GetBalance")
+	if got, err := balance.BuildPath(nil); err != nil || got != "/v1/balance" {
+		t.Errorf("GetBalance: got %q, %v", got, err)
+	}
+}
+
+// Every placeholder must be a declared path parameter, or BuildPath would
+// send it literally.
+func TestIndexPathTemplatesMatchParams(t *testing.T) {
+	loadIndex()
+
+	for _, op := range index.ops {
+		path := op.Path
+		for _, name := range op.PathParams {
+			path = strings.Replace(path, "{"+name+"}", "x", 1)
+		}
+
+		if strings.ContainsAny(path, "{}") {
+			t.Errorf("%s: %s has undeclared placeholders", op.ID, op.Path)
+		}
+	}
+}
+
+func TestIsV2(t *testing.T) {
+	v1, _ := LookupOperation("GetBalance")
+	v2, _ := LookupOperation("GetV2CoreAccounts")
+
+	if v1.IsV2() || !v2.IsV2() {
+		t.Errorf("IsV2: GetBalance %v, GetV2CoreAccounts %v", v1.IsV2(), v2.IsV2())
+	}
+}
