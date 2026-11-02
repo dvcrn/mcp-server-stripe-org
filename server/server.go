@@ -55,7 +55,8 @@ func tools(s *mcp.Server) {
 			"Find IDs with search_api_operations and parameters with get_api_operation. " +
 			"`account` is required for /v1 operations; /v2 operations without it run across the whole organization. " +
 			"List operations take params.limit (default 10, max 100). " +
-			"Page /v1 lists with params.starting_after and /v2 lists with params.page from next_page_url.",
+			"Page /v1 lists with params.starting_after and /v2 lists with params.page from next_page_url. " +
+			"Expanding or including card numbers, CVCs, Issuing token device data, Identity personal data or bank account numbers is refused.",
 		Annotations: readOnly(),
 	}, apiRead)
 
