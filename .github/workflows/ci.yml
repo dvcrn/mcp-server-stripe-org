@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    # The arm64 image ships gcc, which go test -race needs for cgo.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    env:
+      # Without this, mise install and mise run also install wrangler, which no CI task uses.
+      MISE_DISABLE_TOOLS: wrangler
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('go.sum', 'mise.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-go-
+
+      - run: mise run test
+      - run: mise run lint
+      - run: mise run check
