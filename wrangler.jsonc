@@ -1,0 +1,18 @@
+{
+  "name": "mcp-server-stripe-org",
+  "main": "build/worker.mjs",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "build": {
+    "command": "mise run build-worker",
+    "watch_dir": ["cmd", "internal", "server", "stripe"]
+  },
+  "observability": {
+    "enabled": true
+  },
+  "limits": {
+    "cpu_ms": 30000
+  }
+  // Secrets: STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN (set with `mise run worker-secrets`).
+  // STRIPE_ACCOUNTS is a secret rather than a var to keep account IDs out of this public repo.
+}
