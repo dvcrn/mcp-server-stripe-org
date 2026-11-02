@@ -149,12 +149,14 @@ func tableColumns(ctx context.Context, env *Env, tables []string) (string, error
 			return "", err
 		}
 
-		if len(list.Data) == 0 {
+		// Guard against the name filter returning a different table.
+		i := slices.IndexFunc(list.Data, func(s querySchema) bool { return s.Name == name })
+		if i < 0 {
 			missing = append(missing, name)
 			continue
 		}
 
-		writeTable(&b, list.Data[0])
+		writeTable(&b, list.Data[i])
 	}
 
 	if len(missing) > 0 {
