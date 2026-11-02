@@ -5,10 +5,6 @@ wrangler = "4.156.1"
 [env]
 CLOUDFLARE_ACCOUNT_ID = "02c07a2514d9a25f58c78a180bb8c6f3"
 
-[tasks.test]
-description = "Run Go tests"
-run = "go test ./..."
-
 [tasks.build-worker]
 description = "Build the Cloudflare Workers bundle into build/"
 run = """
@@ -16,10 +12,63 @@ go run github.com/syumai/workers-go/cmd/workers-assets-gen -mode=go
 GOOS=js GOARCH=wasm go build -ldflags='-s -w' -o ./build/app.wasm ./cmd/worker
 """
 
-[tasks.worker-dev]
-description = "Run the worker locally with wrangler"
+[tasks.gen-index]
+description = "Generate the embedded Stripe OpenAPI GET-operation index"
+run = "echo 'gen-index: not implemented yet'"
+
+[tasks.dev]
+description = "Run the worker locally with wrangler against the sandbox key"
 run = "wrangler dev"
 
-[tasks.deploy-worker]
+[tasks.deploy]
 description = "Build and deploy the worker"
-run = "wrangler deploy"
+run = "fnox -P production exec -- wrangler deploy"
+
+[tasks.worker-secrets]
+description = "Upload the production Stripe key to the worker"
+run = """
+key="$(fnox -P production get STRIPE_ORG_KEY)"
+printf %s "$key" | wrangler secret put STRIPE_ORG_KEY
+"""
+
+# Skip native test and vet while every package is wasm-only.
+[tasks.test]
+description = "Run Go tests with the race detector"
+run = """
+pkgs="$(go list ./...)"
+if [ -z "$pkgs" ]; then echo 'test: no native packages yet'; exit 0; fi
+go test -race $pkgs
+"""
+
+[tasks.lint]
+description = "Vet the native and wasm builds"
+run = """
+pkgs="$(go list ./...)"
+if [ -n "$pkgs" ]; then go vet $pkgs; else echo 'lint: no native packages yet'; fi
+GOOS=js GOARCH=wasm go vet ./...
+"""
+
+[tasks.check]
+description = "Check formatting and that the worker compiles to wasm"
+run = """
+unformatted="$(gofmt -l .)"
+if [ -n "$unformatted" ]; then echo "gofmt needed:"; echo "$unformatted"; exit 1; fi
+GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/worker
+"""
+
+[tasks.probe]
+description = "Probe the Stripe org key's permissions without changing anything"
+usage = '''
+flag "-P --profile <profile>" help="fnox profile to load STRIPE_ORG_KEY from"
+arg "[account]" help="acct_ ID to send as Stripe-Context (default: Digital Vibes sandbox)"
+'''
+run = """
+if [ -n "${usage_profile:-}" ]; then
+  # Drop any inherited key so a failed lookup can't fall back to another profile's key.
+  exec env -u STRIPE_ORG_KEY fnox -P "$usage_profile" exec -- scripts/probe-permissions.sh ${usage_account:+"$usage_account"}
+elif [ -n "${STRIPE_ORG_KEY:-}" ]; then
+  exec scripts/probe-permissions.sh ${usage_account:+"$usage_account"}
+else
+  exec fnox exec -- scripts/probe-permissions.sh ${usage_account:+"$usage_account"}
+fi
+"""
