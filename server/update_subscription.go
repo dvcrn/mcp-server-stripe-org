@@ -36,10 +36,8 @@ func checkTrialEnd(v string) error {
 		return nil
 	}
 
-	if unixSecondsPattern.MatchString(v) {
-		if _, err := strconv.ParseInt(v, 10, 64); err == nil {
-			return nil
-		}
+	if _, err := strconv.ParseInt(v, 10, 64); err == nil && unixSecondsPattern.MatchString(v) {
+		return nil
 	}
 
 	return fmt.Errorf("trial_end must be \"now\" or Unix seconds as a base-10 string such as \"1767225600\", got %q", v)

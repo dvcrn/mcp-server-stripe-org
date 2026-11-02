@@ -414,9 +414,8 @@ func TestLiveCouponTools(t *testing.T) {
 	expect(t, deleted, "deleted", true)
 }
 
-// TestLiveCreateRefund needs a payment intent fixture. Direct charges don't
-// work as a fixture because the sandbox accounts are Japanese, and Stripe
-// declines non-3DS charges there under the Japan 3DS mandate.
+// TestLiveCreateRefund needs a payment intent fixture because the sandbox
+// accounts decline direct non-3DS charges.
 func TestLiveCreateRefund(t *testing.T) {
 	l := liveWrites(t)
 

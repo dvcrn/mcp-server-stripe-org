@@ -9,7 +9,7 @@ import (
 type updateFeatureInput struct {
 	postInput
 	Feature  string            `json:"feature" jsonschema:"entitlement feature ID, e.g. feat_123"`
-	Name     string            `json:"name,omitempty" jsonschema:"new name shown to customers"`
+	Name     string            `json:"name,omitempty" jsonschema:"new feature name, for internal use"`
 	Active   *bool             `json:"active,omitempty" jsonschema:"false to archive the feature; archived features can't be attached to new products"`
 	Metadata map[string]string `json:"metadata,omitempty" jsonschema:"metadata to set, e.g. {\"tier\": \"pro\"}; an empty value removes that key, keys left out are kept"`
 }

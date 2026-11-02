@@ -32,7 +32,7 @@ func New() *mcp.Server {
 func tools(s *mcp.Server) {
 	add(s, &mcp.Tool{
 		Name:        "list_accounts",
-		Description: "List the Stripe accounts this server can read, with the alias to pass as `account` to other tools and whether the key is live or sandbox.",
+		Description: "List the Stripe accounts this server can read and write, with the alias to pass as `account` to other tools and whether the key is live or sandbox.",
 		Annotations: readOnly(),
 	}, listAccounts)
 

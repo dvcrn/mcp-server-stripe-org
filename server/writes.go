@@ -71,8 +71,8 @@ func del(path string, ids map[string]string, in accountInput) writeRequest {
 	return writeRequest{method: http.MethodDelete, path: path, ids: ids, account: in.Account}
 }
 
-// setParams copies the set fields into params: nil pointers and empty maps
-// are left out, so a zero value never overwrites anything in Stripe.
+// setParams copies the set fields into params, leaving out nil pointers, empty
+// strings and empty maps so an unset field never overwrites anything in Stripe.
 func setParams(params map[string]any, fields map[string]any) map[string]any {
 	for name, v := range fields {
 		switch v := v.(type) {
