@@ -251,20 +251,18 @@ func textResult(text string) *mcp.CallToolResult {
 }
 
 func readOnly() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: new(true)}
 }
 
 func mutating() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{DestructiveHint: ptr(false), OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{DestructiveHint: new(false), OpenWorldHint: new(true)}
 }
 
 // idempotent marks a non-destructive write that has no further effect when repeated with the same arguments.
 func idempotent() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{DestructiveHint: ptr(false), IdempotentHint: true, OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{DestructiveHint: new(false), IdempotentHint: true, OpenWorldHint: new(true)}
 }
 
 func destructive() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{DestructiveHint: ptr(true), OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{DestructiveHint: new(true), OpenWorldHint: new(true)}
 }
-
-func ptr[T any](v T) *T { return &v }
