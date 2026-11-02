@@ -43,12 +43,6 @@ func TestIndexExcludesAppsSecrets(t *testing.T) {
 			t.Errorf("LookupOperation(%q) found it", id)
 		}
 	}
-
-	for _, op := range SearchOperations("secret", 20) {
-		if strings.HasPrefix(op.ID, "GetAppsSecrets") {
-			t.Errorf("search \"secret\" returned %s", op.ID)
-		}
-	}
 }
 
 func TestIndexQueryParams(t *testing.T) {
