@@ -6,7 +6,7 @@ It runs as the Cloudflare Worker `mcp-server-stripe-org` at https://mcp-server-s
 
 ## Configuration
 
-Secrets come from fnox, so run commands under `fnox exec`. The server needs `STRIPE_ORG_KEY` and `STRIPE_ACCOUNTS`, and the HTTP endpoint also needs `MCP_TOKEN`. The cloud profile (`fnox.cloud.toml`) defines all three. The default and `production` profiles in `fnox.toml` define only `STRIPE_ORG_KEY`, so add the other two there before using them.
+Secrets come from fnox, so run commands under `fnox exec`. The server needs `STRIPE_ORG_KEY` and `STRIPE_ACCOUNTS`, and the HTTP endpoint also needs `MCP_TOKEN`. The cloud profile (`fnox.cloud.toml`) defines all three: select it with `-P cloud` or `FNOX_PROFILE=cloud`. The default and `production` profiles in `fnox.toml` define only `STRIPE_ORG_KEY`, so add the other two there before using them.
 
 ## Run locally
 
@@ -27,10 +27,10 @@ mise run worker-secrets  # upload STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN 
 
 ## Use from Claude Code
 
-`.mcp.json` registers the HTTP endpoint as `stripe-org` and reads the bearer token from `MCP_TOKEN`. Start Claude Code under fnox so the variable is set from a profile that defines it, such as the cloud profile:
+`.mcp.json` registers the HTTP endpoint as `stripe-org` and reads the bearer token from `MCP_TOKEN`. Pass only that token to Claude Code, from a profile that defines it such as the cloud profile, so the Stripe org key stays out of the agent's environment:
 
 ```sh
-fnox exec -- claude
+MCP_TOKEN="$(fnox -P cloud get MCP_TOKEN)" claude
 ```
 
 The token must match the `MCP_TOKEN` last uploaded with `mise run worker-secrets`. Claude Code asks once to approve the project server.
