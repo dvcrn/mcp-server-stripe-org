@@ -13,8 +13,8 @@ GOOS=js GOARCH=wasm go build -ldflags='-s -w' -o ./build/app.wasm ./cmd/worker
 """
 
 [tasks.gen-index]
-description = "Generate the embedded Stripe OpenAPI GET-operation index"
-run = "echo 'gen-index: not implemented yet'"
+description = "Regenerate stripe/index.json.gz from the pinned Stripe OpenAPI spec"
+run = "go run ./cmd/gen-index"
 
 [tasks.dev]
 description = "Run the worker locally with wrangler against the sandbox key"
