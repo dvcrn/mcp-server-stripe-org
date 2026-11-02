@@ -1,6 +1,7 @@
 [tools]
 go = "1.26.3"
 wrangler = "4.156.1"
+jq = "1.8.1"
 
 # CLOUDFLARE_ACCOUNT_ID comes from fnox.cloud.toml (cloud profile) in cloud sessions
 # and from the gitignored mise.local.toml on local machines.
@@ -9,27 +10,41 @@ wrangler = "4.156.1"
 description = "Build the Cloudflare Workers bundle into build/"
 run = """
 go run github.com/syumai/workers-go/cmd/workers-assets-gen -mode=go
-GOOS=js GOARCH=wasm go build -ldflags='-s -w' -o ./build/app.wasm ./cmd/worker
+GOOS=js GOARCH=wasm go build -trimpath -ldflags='-s -w' -o ./build/app.wasm ./cmd/mcp-worker
 """
 
 [tasks.gen-index]
 description = "Regenerate stripe/index.json.gz from the pinned Stripe OpenAPI spec"
 run = "go run ./cmd/gen-index"
 
+[tasks.dev-vars]
+description = "Write the gitignored .dev.vars for wrangler dev from the active fnox profile"
+run = '''
+set -eu
+secrets="$(scripts/worker-secrets.sh dev-json)"
+vars="$(printf %s "$secrets" | jq -r '
+  to_entries[]
+  | if .value | test("[\n'\'']") then error("\(.key) contains a newline or single quote")
+    else "\(.key)='\''\(.value)'\''" end
+')"
+rm -f .dev.vars
+umask 077
+printf '%s\n' "$vars" > .dev.vars
+'''
+
 [tasks.dev]
-description = "Run the worker locally with wrangler against the sandbox key"
+description = "Run the worker locally with wrangler using secrets from the active fnox profile"
+depends = ["dev-vars"]
 run = "wrangler dev"
 
 [tasks.deploy]
-description = "Build and deploy the worker"
-run = "fnox -P production exec -- wrangler deploy"
+description = "Build and deploy the worker with the active fnox profile"
+run = "fnox exec -- wrangler deploy"
 
 [tasks.worker-secrets]
-description = "Upload the production Stripe key to the worker"
-run = """
-key="$(fnox -P production get STRIPE_ORG_KEY)"
-printf %s "$key" | wrangler secret put STRIPE_ORG_KEY
-"""
+description = "Upload STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN to the worker from a fnox profile"
+usage = 'flag "-P --profile <profile>" help="fnox profile to read the secrets from (default: the active profile; a live key needs -P production)"'
+run = 'scripts/worker-secrets.sh ${usage_profile:+-P "$usage_profile"}'
 
 # Skip native test and vet while every package is wasm-only.
 [tasks.test]
@@ -53,7 +68,7 @@ description = "Check formatting and that the worker compiles to wasm"
 run = """
 unformatted="$(gofmt -l .)"
 if [ -n "$unformatted" ]; then echo "gofmt needed:"; echo "$unformatted"; exit 1; fi
-GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/worker
+GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/mcp-worker
 """
 
 [tasks.probe]

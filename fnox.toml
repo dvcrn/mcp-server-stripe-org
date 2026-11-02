@@ -5,5 +5,7 @@ type = "1password"
 STRIPE_ORG_KEY = { provider = "1password", value = "op://cloud-dev/Stripe - digital-vibes-org - Cloudflare Stripe proxy sandbox/credential" }
 CLOUDFLARE_API_TOKEN = { provider = "1password", value = "op://cloud-dev/Cloudflare - mcp-server-stripe-org - worker deploy token/credential" }
 
+# The worker runs on the sandbox key until it is switched to production. Add STRIPE_ACCOUNTS
+# and MCP_TOKEN here before running `mise run worker-secrets -P production`.
 [profiles.production.secrets]
 STRIPE_ORG_KEY = { provider = "1password", value = "op://Dev/Stripe - digital-vibes-org - Cloudflare Stripe proxy/credential" }
