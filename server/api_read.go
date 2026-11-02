@@ -6,6 +6,7 @@ import (
 	"maps"
 	"math"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -85,6 +86,12 @@ func queryParams(op stripe.Operation, in map[string]any) (map[string]any, error)
 		}
 	}
 
+	for _, name := range []string{"expand", "include"} {
+		if err := checkFieldPaths(op, name, params[name]); err != nil {
+			return nil, err
+		}
+	}
+
 	for _, p := range accepted {
 		if p.Required && isEmpty(params[p.Name]) {
 			return nil, fmt.Errorf("%s needs query parameter %q (%s)", op.ID, p.Name, p.Type)
@@ -101,6 +108,53 @@ func queryParams(op stripe.Operation, in map[string]any) (map[string]any, error)
 	}
 
 	return params, nil
+}
+
+// blockedFields are field names api_read never lets a caller expand (v1
+// expand) or include (v2 include). Stripe leaves these values out of responses
+// unless they are requested by name, so blocking the request keeps them out of
+// the model's context. A path is blocked if any of its dot-separated segments
+// is listed, so data.number on a list and number on a retrieve are both caught.
+var blockedFields = map[string]string{
+	"number":           "Issuing card numbers and Identity document numbers",
+	"cvc":              "Issuing card CVCs",
+	"verified_outputs": "Identity verified personal data",
+	"dob":              "dates of birth from Identity",
+	"id_number":        "government ID numbers from Identity",
+	"expiration_date":  "Identity document expiry dates",
+	"account_number":   "full bank account numbers",
+}
+
+// fieldPathPattern is the shape of every Stripe expand and include path. Anything
+// else is rejected so brackets, spaces or encodings can't hide a blocked segment.
+var fieldPathPattern = regexp.MustCompile(`^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)*$`)
+
+// checkFieldPaths rejects an expand or include value that is not a list of
+// field paths or that names a blocked field.
+func checkFieldPaths(op stripe.Operation, param string, v any) error {
+	if v == nil {
+		return nil
+	}
+
+	list, ok := v.([]any)
+	if !ok {
+		return fmt.Errorf("%s: %s must be a list of field paths, got %T", op.ID, param, v)
+	}
+
+	for _, item := range list {
+		path, ok := item.(string)
+		if !ok || !fieldPathPattern.MatchString(path) {
+			return fmt.Errorf("%s: %s values must be dot-separated field names like data.customer, got %v", op.ID, param, item)
+		}
+
+		for segment := range strings.SplitSeq(strings.ToLower(path), ".") {
+			if reason, blocked := blockedFields[segment]; blocked {
+				return fmt.Errorf("%s: %s %q is blocked because %q returns %s", op.ID, param, path, segment, reason)
+			}
+		}
+	}
+
+	return nil
 }
 
 // v2PageParam is the cursor /v2 lists take from next_page_url, which the

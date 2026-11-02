@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"sync/atomic"
 	"testing"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -68,5 +69,62 @@ func TestLiveAPIReadBalance(t *testing.T) {
 		if balance.Object != "balance" || balance.Livemode {
 			t.Errorf("%s: got object %q livemode %v, want a sandbox balance", a.Alias, balance.Object, balance.Livemode)
 		}
+	}
+}
+
+// countingTransport counts the requests that reach Stripe.
+type countingTransport struct {
+	next  http.RoundTripper
+	count atomic.Int32
+}
+
+func (c *countingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	c.count.Add(1)
+
+	return c.next.RoundTrip(r)
+}
+
+// TestLiveAPIReadSensitiveExpand needs STRIPE_ORG_KEY (the sandbox org key),
+// STRIPE_ACCOUNTS and STRIPE_TEST_ACCOUNT, for example via fnox exec.
+func TestLiveAPIReadSensitiveExpand(t *testing.T) {
+	key, accounts, account := os.Getenv(EnvOrgKey), os.Getenv(EnvAccounts), os.Getenv("STRIPE_TEST_ACCOUNT")
+	if key == "" || accounts == "" || account == "" {
+		t.Skip("STRIPE_ORG_KEY, STRIPE_ACCOUNTS and STRIPE_TEST_ACCOUNT must be set")
+	}
+
+	transport := &countingTransport{next: http.DefaultTransport}
+	env, err := NewEnv(key, accounts, &http.Client{Transport: transport})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cs := connectEnv(t, WithEnv(context.Background(), env))
+
+	wantError(t, call(t, cs, "api_read", map[string]any{
+		"operation_id": "GetIssuingCardsCard",
+		"account":      account,
+		"path_params":  map[string]any{"card": "ic_dummy"},
+		"params":       map[string]any{"expand": []any{"number", "cvc"}},
+	}), `expand "number" is blocked`)
+
+	if n := transport.count.Load(); n != 0 {
+		t.Fatalf("blocked expand sent %d requests to Stripe, want 0", n)
+	}
+
+	res := call(t, cs, "api_read", map[string]any{
+		"operation_id": "GetSubscriptions",
+		"account":      account,
+		"params":       map[string]any{"expand": []any{"data.customer", "data.latest_invoice"}, "limit": 1},
+	})
+
+	var list struct {
+		Object string `json:"object"`
+	}
+	if err := json.Unmarshal([]byte(wantOK(t, res)), &list); err != nil {
+		t.Fatal(err)
+	}
+
+	if list.Object != "list" || transport.count.Load() != 1 {
+		t.Errorf("got object %q after %d requests, want a list after 1", list.Object, transport.count.Load())
 	}
 }
