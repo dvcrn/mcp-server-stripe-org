@@ -7,3 +7,5 @@ CLOUDFLARE_API_TOKEN = { provider = "1password", value = "op://cloud-dev/Cloudfl
 
 [profiles.production.secrets]
 STRIPE_ORG_KEY = { provider = "1password", value = "op://Dev/Stripe - digital-vibes-org - Cloudflare Stripe proxy/credential" }
+STRIPE_ACCOUNTS = { provider = "1password", value = "op://Dev/mcp-server-stripe-org/STRIPE_ACCOUNTS" }
+MCP_TOKEN = { provider = "1password", value = "op://Dev/mcp-server-stripe-org/MCP_TOKEN" }

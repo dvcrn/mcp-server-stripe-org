@@ -18,46 +18,41 @@ description = "Regenerate stripe/index.json.gz from the pinned Stripe OpenAPI sp
 run = "go run ./cmd/gen-index"
 
 [tasks.dev-vars]
-description = "Write the gitignored .dev.vars for wrangler dev from the active fnox profile"
+description = "Write the gitignored .dev.vars for wrangler dev from the active fnox profile (sandbox key only)"
 run = '''
 set -eu
-vars="$(env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN fnox exec -- jq -nr '
-  $ENV | {STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN}
-  | if any(.[]; . == null or . == "") then error("empty in the fnox profile: \([to_entries[] | select(.value == null or .value == "") | .key] | join(", "))") else . end
-  | .STRIPE_ACCOUNTS |= (fromjson | tojson)
-  | to_entries[]
+secrets="$(scripts/worker-secrets.sh dev-json)"
+vars="$(printf %s "$secrets" | jq -r '
+  to_entries[]
   | if .value | test("[\n'\'']") then error("\(.key) contains a newline or single quote")
     else "\(.key)='\''\(.value)'\''" end
 ')"
-rm -f .dev.vars
+# wrangler dev --env dev prefers .dev.vars.dev, which would skip the sandbox key check.
+rm -f .dev.vars .dev.vars.dev
 umask 077
 printf '%s\n' "$vars" > .dev.vars
 '''
 
 [tasks.dev]
-description = "Run the worker locally with wrangler using secrets from the active fnox profile"
+description = "Run the dev worker locally with wrangler and .dev.vars"
 depends = ["dev-vars"]
-run = "wrangler dev"
+run = "wrangler dev --env dev"
 
 [tasks.deploy]
-description = "Build and deploy the worker"
-run = "fnox -P production exec -- wrangler deploy"
+description = "Build and deploy the production worker"
+run = 'fnox -P production exec -- env -u CLOUDFLARE_ENV wrangler deploy --env=""'
+
+[tasks.deploy-dev]
+description = "Build and deploy the dev worker (mcp-server-stripe-org-dev) with the active fnox profile"
+run = "fnox exec -- wrangler deploy --env=dev"
 
 [tasks.worker-secrets]
-description = "Upload STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN to the worker from a fnox profile"
-usage = 'flag "-P --profile <profile>" help="fnox profile to read the secrets from (default: the active profile)"'
-run = '''
-set -eu
-profile="${usage_profile:-}"
-# Validate all three secrets first so a missing one aborts before any upload.
-secrets="$(env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN fnox ${profile:+-P "$profile"} exec -- jq -n '
-  $ENV | {STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN}
-  | if any(.[]; . == null or . == "") then error("empty in the fnox profile: \([to_entries[] | select(.value == null or .value == "") | .key] | join(", "))") else . end
-  | .STRIPE_ACCOUNTS |= (fromjson | tojson)
-')"
-# fnox supplies the Cloudflare API token; the Stripe secrets reach wrangler only on stdin.
-printf %s "$secrets" | fnox ${profile:+-P "$profile"} exec -- env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN wrangler secret bulk
-'''
+description = "Upload the production fnox profile's secrets to the production worker (live key only)"
+run = "scripts/worker-secrets.sh upload production"
+
+[tasks.worker-secrets-dev]
+description = "Upload the active fnox profile's secrets to the dev worker (sandbox key only)"
+run = "scripts/worker-secrets.sh upload dev"
 
 # Skip native test and vet while every package is wasm-only.
 [tasks.test]
