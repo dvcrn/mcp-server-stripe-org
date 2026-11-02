@@ -414,34 +414,48 @@ func TestLiveCouponTools(t *testing.T) {
 	expect(t, deleted, "deleted", true)
 }
 
-// TestLiveCreateRefund needs a payment intent fixture because the sandbox
-// accounts decline direct non-3DS charges.
+// TestLiveCreateRefund charges a debit card token through /v1/charges
+// because the sandbox key can't create payment intents, and the sandbox
+// accounts decline direct credit card charges that skip 3DS. Debit cards
+// are exempt from that 3DS requirement.
 func TestLiveCreateRefund(t *testing.T) {
 	l := liveWrites(t)
 
-	pi := l.fixture(t, http.MethodPost, "/v1/payment_intents", map[string]any{
-		"amount":                    1000,
-		"currency":                  "usd",
-		"payment_method":            "pm_card_visa",
-		"confirm":                   true,
-		"automatic_payment_methods": map[string]any{"enabled": true, "allow_redirects": "never"},
-		"metadata":                  map[string]string{"run": "mcp-integration " + l.suffix},
+	ch := l.fixture(t, http.MethodPost, "/v1/charges", map[string]any{
+		"amount":   1000,
+		"currency": "usd",
+		"source":   "tok_visa_debit",
+		"metadata": map[string]string{"run": "mcp-integration " + l.suffix},
 	})
-	if pi["status"] != "succeeded" {
-		t.Skipf("payment intent %s has status %v, so there is no charge to refund", id(pi), pi["status"])
-	}
+	charge := id(ch)
+	// Refunds the remainder of the charge if the test stops early.
+	l.cleanup(t, http.MethodPost, "/v1/refunds", map[string]any{"charge": charge})
 
-	r := l.call(t, "create_refund", map[string]any{
-		"payment_intent":  id(pi),
+	partial := map[string]any{
+		"charge":          charge,
 		"amount":          400,
 		"reason":          "requested_by_customer",
 		"metadata":        map[string]any{"run": l.suffix},
 		"idempotency_key": "mcp-integration-refund-" + l.suffix,
-	})
+	}
+	r := l.call(t, "create_refund", partial)
 	expect(t, r, "amount", 400)
 	expect(t, r, "status", "succeeded")
+	expect(t, r, "reason", "requested_by_customer")
+	if m := metadata(r); m["run"] != l.suffix {
+		t.Errorf("metadata = %v, want run=%s", m, l.suffix)
+	}
 
-	charge, _ := pi["latest_charge"].(string)
+	replay := l.call(t, "create_refund", partial)
+	if id(replay) != id(r) {
+		t.Errorf("replay with the same idempotency key created refund %s, want %s", id(replay), id(r))
+	}
+
 	r = l.call(t, "create_refund", map[string]any{"charge": charge})
 	expect(t, r, "amount", 600)
+	expect(t, r, "status", "succeeded")
+
+	ch = l.fixture(t, http.MethodGet, "/v1/charges/"+charge, nil)
+	expect(t, ch, "amount_refunded", 1000)
+	expect(t, ch, "refunded", true)
 }
