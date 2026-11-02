@@ -42,7 +42,7 @@ func createCoupon(ctx context.Context, env *Env, in createCouponInput) (*mcp.Cal
 		"metadata":           in.Metadata,
 	})
 
-	return writeV1(ctx, env, "create_coupon", post("/v1/coupons", nil, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/coupons", nil, in.postInput, params))
 }
 
 // checkCoupon rejects parameter combinations that Stripe refuses.

@@ -12,5 +12,5 @@ type deleteCouponInput struct {
 }
 
 func deleteCoupon(ctx context.Context, env *Env, in deleteCouponInput) (*mcp.CallToolResult, any, error) {
-	return writeV1(ctx, env, "delete_coupon", del("/v1/coupons/{coupon}", map[string]string{"coupon": in.Coupon}, in.accountInput))
+	return writeV1(ctx, env, del("/v1/coupons/{coupon}", map[string]string{"coupon": in.Coupon}, in.accountInput))
 }

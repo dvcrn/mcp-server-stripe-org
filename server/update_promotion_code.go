@@ -19,5 +19,5 @@ func updatePromotionCode(ctx context.Context, env *Env, in updatePromotionCodeIn
 		return nil, nil, err
 	}
 
-	return writeV1(ctx, env, "update_promotion_code", post("/v1/promotion_codes/{promotion_code}", map[string]string{"promotion_code": in.PromotionCode}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/promotion_codes/{promotion_code}", map[string]string{"promotion_code": in.PromotionCode}, in.postInput, params))
 }

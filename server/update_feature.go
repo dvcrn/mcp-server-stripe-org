@@ -20,5 +20,5 @@ func updateFeature(ctx context.Context, env *Env, in updateFeatureInput) (*mcp.C
 		return nil, nil, err
 	}
 
-	return writeV1(ctx, env, "update_feature", post("/v1/entitlements/features/{feature}", map[string]string{"feature": in.Feature}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/entitlements/features/{feature}", map[string]string{"feature": in.Feature}, in.postInput, params))
 }

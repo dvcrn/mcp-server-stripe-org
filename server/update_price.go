@@ -26,5 +26,5 @@ func updatePrice(ctx context.Context, env *Env, in updatePriceInput) (*mcp.CallT
 		return nil, nil, err
 	}
 
-	return writeV1(ctx, env, "update_price", post("/v1/prices/{price}", map[string]string{"price": in.Price}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/prices/{price}", map[string]string{"price": in.Price}, in.postInput, params))
 }

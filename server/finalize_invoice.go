@@ -15,5 +15,5 @@ type finalizeInvoiceInput struct {
 func finalizeInvoice(ctx context.Context, env *Env, in finalizeInvoiceInput) (*mcp.CallToolResult, any, error) {
 	params := setParams(map[string]any{}, map[string]any{"auto_advance": in.AutoAdvance})
 
-	return writeV1(ctx, env, "finalize_invoice", post("/v1/invoices/{invoice}/finalize", map[string]string{"invoice": in.Invoice}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/invoices/{invoice}/finalize", map[string]string{"invoice": in.Invoice}, in.postInput, params))
 }

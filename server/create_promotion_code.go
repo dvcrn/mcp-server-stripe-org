@@ -32,5 +32,5 @@ func createPromotionCode(ctx context.Context, env *Env, in createPromotionCodeIn
 		"metadata":        in.Metadata,
 	})
 
-	return writeV1(ctx, env, "create_promotion_code", post("/v1/promotion_codes", nil, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/promotion_codes", nil, in.postInput, params))
 }

@@ -37,9 +37,9 @@ type writeRequest struct {
 
 // writeV1 validates the IDs, resolves the account and sends the request,
 // returning Stripe's JSON response as text content like api_read does.
-func writeV1(ctx context.Context, env *Env, tool string, req writeRequest) (*mcp.CallToolResult, any, error) {
+func writeV1(ctx context.Context, env *Env, req writeRequest) (*mcp.CallToolResult, any, error) {
 	pathParams := slices.Collect(maps.Keys(req.ids))
-	path, err := stripe.Operation{ID: tool, Path: req.path, PathParams: pathParams}.BuildPath(req.ids)
+	path, err := stripe.Operation{ID: toolName(ctx), Path: req.path, PathParams: pathParams}.BuildPath(req.ids)
 	if err != nil {
 		return nil, nil, err
 	}
