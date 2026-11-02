@@ -178,7 +178,7 @@ func TestRunSQLQueryStillRunning(t *testing.T) {
 	}
 
 	want := "query_run_id: qrun_test_dummy1\naccount: dummy-one\nstatus: running\n" +
-		"The query has not finished. Call get_query_run with this query_run_id and account in 30 to 60 seconds; large queries can take several minutes, so wait longer between later checks.\n"
+		"The query has not finished. Call get_query_run with this query_run_id and account in 30 to 60 seconds. Large queries can take several minutes, so wait longer between later checks.\n"
 	if got != want {
 		t.Errorf("text =\n%s\nwant\n%s", got, want)
 	}
@@ -303,7 +303,7 @@ func TestGetQueryRunRunning(t *testing.T) {
 
 	got := wantOK(t, call(t, cs, "get_query_run", map[string]any{"query_run_id": fakeRunID}))
 	want := "query_run_id: " + fakeRunID + "\nstatus: running\n" +
-		"The query has not finished. Call get_query_run with this query_run_id in 30 to 60 seconds; large queries can take several minutes, so wait longer between later checks.\n"
+		"The query has not finished. Call get_query_run with this query_run_id in 30 to 60 seconds. Large queries can take several minutes, so wait longer between later checks.\n"
 	if got != want {
 		t.Errorf("text =\n%s\nwant\n%s", got, want)
 	}
@@ -408,8 +408,8 @@ func TestListQueryTablesColumns(t *testing.T) {
 	wantOK(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{" charges "}}))
 }
 
-// TestListQueryTablesStripsHostNotes serves a charges schema as the sandbox
-// returns it, with notes aimed at tools this server does not have.
+// TestListQueryTablesStripsHostNotes checks that notes naming tools this
+// server lacks are dropped and the timezone note becomes utcNote.
 func TestListQueryTablesStripsHostNotes(t *testing.T) {
 	fixture, err := os.ReadFile("testdata/charges_schema.json")
 	if err != nil {

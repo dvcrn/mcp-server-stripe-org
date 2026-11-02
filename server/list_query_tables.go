@@ -191,8 +191,8 @@ func writeTable(b *strings.Builder, s querySchema) {
 	b.WriteString("\n")
 }
 
-// tableNotes keeps the paragraphs of a table's extended description that
-// apply to this server, rewriting the timezone one to the UTC rule alone.
+// tableNotes returns the paragraphs of a table's extended description that
+// apply to this server, with the timezone paragraph replaced by utcNote.
 func tableNotes(s string) string {
 	var kept []string
 	for _, p := range paragraphBreak.Split(s, -1) {
