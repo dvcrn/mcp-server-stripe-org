@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -58,6 +59,8 @@ func TestAuth(t *testing.T) {
 		{"bearer", testToken, map[string]string{"Authorization": "Bearer " + testToken}, http.StatusOK},
 		{"bearer lowercase", testToken, map[string]string{"Authorization": "bearer " + testToken}, http.StatusOK},
 		{"api key", testToken, map[string]string{"X-API-Key": testToken}, http.StatusOK},
+		{"basic falls back to api key", testToken, map[string]string{"Authorization": "Basic x", "X-API-Key": testToken}, http.StatusOK},
+		{"wrong bearer ignores api key", testToken, map[string]string{"Authorization": "Bearer wrong", "X-API-Key": testToken}, http.StatusUnauthorized},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := postMCP(t, Handler(testGetenv(tc.token)), tc.header, listToolsBody)
@@ -118,4 +121,21 @@ func TestEnvCacheReloadsOnChange(t *testing.T) {
 	if changed == first || !changed.Livemode {
 		t.Error("changed key did not rebuild the Env")
 	}
+}
+
+// One Handler serves concurrent requests in a Workers isolate.
+func TestHTTPConcurrentRequests(t *testing.T) {
+	h := Handler(testGetenv(testToken))
+
+	var wg sync.WaitGroup
+	for range 20 {
+		wg.Go(func() {
+			rec := postMCP(t, h, map[string]string{"Authorization": "Bearer " + testToken},
+				`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"list_accounts","arguments":{}}}`)
+			if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "acct_1DUMMYONE") {
+				t.Errorf("got %d %s", rec.Code, rec.Body)
+			}
+		})
+	}
+	wg.Wait()
 }

@@ -42,9 +42,11 @@ func getAPIOperation(_ context.Context, _ *Env, in getAPIOperationInput) (*mcp.C
 		Summary:         op.Summary,
 		AccountRequired: !op.IsV2(),
 		PathParams:      append([]string{}, op.PathParams...),
-		QueryParams:     make([]queryParamOutput, len(op.QueryParams)),
 	}
-	for i, p := range op.QueryParams {
+
+	params := queryParamsOf(op)
+	out.QueryParams = make([]queryParamOutput, len(params))
+	for i, p := range params {
 		out.QueryParams[i] = queryParamOutput{Name: p.Name, Type: p.Type, Description: p.Description, Required: p.Required, Enum: p.Enum}
 	}
 

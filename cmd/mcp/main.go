@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -23,7 +24,8 @@ func main() {
 
 	if *addr != "" {
 		log.Printf("serving MCP on http://%s/mcp", *addr)
-		log.Fatal(http.ListenAndServe(*addr, server.Handler(os.Getenv)))
+		srv := &http.Server{Addr: *addr, Handler: server.Handler(os.Getenv), ReadHeaderTimeout: 10 * time.Second}
+		log.Fatal(srv.ListenAndServe())
 	}
 
 	env, err := server.NewEnv(os.Getenv(server.EnvOrgKey), os.Getenv(server.EnvAccounts), httpclient.New())

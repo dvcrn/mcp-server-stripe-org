@@ -244,6 +244,10 @@ func TestGetAPIOperation(t *testing.T) {
 		t.Error("v2 operation should not require an account")
 	}
 
+	if !slices.ContainsFunc(out.QueryParams, func(p queryParamOutput) bool { return p.Name == "page" }) {
+		t.Errorf("v2 list lacks page: %+v", out.QueryParams)
+	}
+
 	wantError(t, call(t, cs, "get_api_operation", map[string]any{"operation_id": "PostCustomers"}), "search_api_operations")
 }
 
@@ -346,10 +350,12 @@ func TestAPIReadV2(t *testing.T) {
 		"params":       map[string]any{"applied_configurations": []any{"customer", "merchant"}},
 	}))
 	wantOK(t, call(t, cs, "api_read", map[string]any{"operation_id": "GetV2CoreAccounts", "account": "dummy-one"}))
+	wantOK(t, call(t, cs, "api_read", map[string]any{"operation_id": "GetV2CoreEvents", "params": map[string]any{"page": "page_dummy", "limit": 5}}))
 
 	want := []stripeCall{
 		{"/v2/core/accounts", "applied_configurations%5B0%5D=customer&applied_configurations%5B1%5D=merchant&limit=10", ""},
 		{"/v2/core/accounts", "limit=10", "acct_1DUMMYONE"},
+		{"/v2/core/events", "limit=5&page=page_dummy", ""},
 	}
 	if !slices.Equal(calls, want) {
 		t.Errorf("calls = %+v, want %+v", calls, want)
@@ -379,6 +385,8 @@ func TestAPIReadErrors(t *testing.T) {
 		{"undeclared query param", map[string]any{"operation_id": "GetBalance", "account": "dummy-one", "params": map[string]any{"limit": 5}}, `does not accept query parameter "limit"`},
 		{"bracket query key", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"created[gt]": 1}}, "does not accept query parameter"},
 		{"bracket nested key", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"created": map[string]any{"gt][x": 1}}}, "invalid key"},
+		{"page on v1", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"page": "x"}}, `does not accept query parameter "page"`},
+		{"page on v2 item", map[string]any{"operation_id": "GetV2CoreAccountsId", "path_params": map[string]any{"id": "x"}, "params": map[string]any{"page": "x"}}, `does not accept query parameter "page"`},
 		{"zero limit", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"limit": 0}}, "whole number"},
 		{"fractional limit", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"limit": 2.5}}, "whole number"},
 		{"string limit", map[string]any{"operation_id": "GetCustomers", "account": "dummy-one", "params": map[string]any{"limit": "5"}}, "whole number"},
@@ -404,6 +412,7 @@ func TestAPIReadRequiredQueryParam(t *testing.T) {
 
 	cs := connect(t, "sk_org_test_dummy", noStripe(t))
 	wantError(t, call(t, cs, "api_read", map[string]any{"operation_id": required, "account": "dummy-one"}), "needs query parameter")
+	wantError(t, call(t, cs, "api_read", map[string]any{"operation_id": required, "account": "dummy-one", "params": map[string]any{"query": ""}}), "needs query parameter")
 }
 
 func TestAPIReadStripeErrors(t *testing.T) {

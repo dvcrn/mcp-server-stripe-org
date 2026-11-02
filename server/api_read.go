@@ -78,8 +78,9 @@ func queryParams(op stripe.Operation, in map[string]any) (map[string]any, error)
 		params = map[string]any{}
 	}
 
-	declared := make([]string, len(op.QueryParams))
-	for i, p := range op.QueryParams {
+	accepted := queryParamsOf(op)
+	declared := make([]string, len(accepted))
+	for i, p := range accepted {
 		declared[i] = p.Name
 	}
 
@@ -89,8 +90,8 @@ func queryParams(op stripe.Operation, in map[string]any) (map[string]any, error)
 		}
 	}
 
-	for _, p := range op.QueryParams {
-		if p.Required && params[p.Name] == nil {
+	for _, p := range accepted {
+		if p.Required && isEmpty(params[p.Name]) {
 			return nil, fmt.Errorf("%s needs query parameter %q (%s)", op.ID, p.Name, p.Type)
 		}
 	}
@@ -105,6 +106,41 @@ func queryParams(op stripe.Operation, in map[string]any) (map[string]any, error)
 	}
 
 	return params, nil
+}
+
+// v2PageParam is the cursor /v2 lists take from next_page_url, which the
+// OpenAPI spec leaves out of their declared parameters.
+var v2PageParam = stripe.Param{
+	Name:        "page",
+	Type:        "string",
+	Description: "Page token from the page= value of a previous response's next_page_url or previous_page_url.",
+}
+
+// queryParamsOf returns the query parameters api_read accepts for op.
+func queryParamsOf(op stripe.Operation) []stripe.Param {
+	params := op.QueryParams
+	if op.IsV2() && slices.ContainsFunc(params, func(p stripe.Param) bool { return p.Name == "limit" }) {
+		params = append(slices.Clone(params), v2PageParam)
+	}
+
+	return params
+}
+
+// isEmpty reports values the form encoder would drop, so a required
+// parameter given as "" or [] fails here with a clear message.
+func isEmpty(v any) bool {
+	switch v := v.(type) {
+	case nil:
+		return true
+	case string:
+		return v == ""
+	case []any:
+		return len(v) == 0
+	case map[string]any:
+		return len(v) == 0
+	}
+
+	return false
 }
 
 func readLimit(v any) (int, error) {
