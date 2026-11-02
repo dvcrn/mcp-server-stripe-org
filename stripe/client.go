@@ -264,7 +264,7 @@ func isPrintableASCII(s string) bool {
 	return true
 }
 
-// ValidAccountID reports whether id is an acct_ ID, the form Stripe-Context takes.
+// ValidAccountID reports whether id is an acct_ ID.
 func ValidAccountID(id string) bool {
 	return accountPattern.MatchString(id)
 }
