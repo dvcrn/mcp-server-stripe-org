@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -21,6 +22,16 @@ const (
 	maxSchemaPages = 5
 	maxTables      = 5
 )
+
+// hostOnlyMarkers mark paragraphs of Stripe's table notes written for its own
+// assistant, which has tools and context tags this server lacks.
+var hostOnlyMarkers = []string{"query_sigma", "get_sql_template", "available_templates", "<message_datetime>"}
+
+// utcNote replaces Stripe's timezone paragraph, whose reporting timezone
+// comes from a <message_datetime> tag this server never sends.
+const utcNote = "TIMEZONE — every timestamp column is UTC unless the column states otherwise."
+
+var paragraphBreak = regexp.MustCompile(`\n[ \t]*\n`)
 
 type listQueryTablesInput struct {
 	Tables []string `json:"tables,omitempty" jsonschema:"up to 5 table names to show columns for, e.g. [\"charges\", \"customers\"]; omit to list every table"`
@@ -155,7 +166,7 @@ func tableColumns(ctx context.Context, env *Env, tables []string) (string, error
 
 func writeTable(b *strings.Builder, s querySchema) {
 	fmt.Fprintf(b, "## %s\n%s\n", s.Name, oneLine(s.Description))
-	if notes := strings.TrimSpace(s.ExtendedDescription); notes != "" {
+	if notes := tableNotes(s.ExtendedDescription); notes != "" {
 		fmt.Fprintf(b, "\n%s\n", notes)
 	}
 
@@ -178,6 +189,25 @@ func writeTable(b *strings.Builder, s querySchema) {
 	}
 
 	b.WriteString("\n")
+}
+
+// tableNotes keeps the paragraphs of a table's extended description that
+// apply to this server, rewriting the timezone one to the UTC rule alone.
+func tableNotes(s string) string {
+	var kept []string
+	for _, p := range paragraphBreak.Split(s, -1) {
+		p = strings.TrimSpace(p)
+		switch {
+		case p == "":
+		case strings.Contains(p, "<message_datetime>"):
+			kept = append(kept, utcNote)
+		case slices.ContainsFunc(hostOnlyMarkers, func(m string) bool { return strings.Contains(p, m) }):
+		default:
+			kept = append(kept, p)
+		}
+	}
+
+	return strings.Join(kept, "\n\n")
 }
 
 func oneLine(s string) string {

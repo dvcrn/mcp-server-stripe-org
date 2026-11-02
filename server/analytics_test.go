@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -403,6 +404,41 @@ func TestListQueryTablesColumns(t *testing.T) {
 	}
 
 	wantOK(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{" charges "}}))
+}
+
+// TestListQueryTablesStripsHostNotes serves a charges schema as the sandbox
+// returns it, with notes aimed at tools this server does not have.
+func TestListQueryTablesStripsHostNotes(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/charges_schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cs := connect(t, "sk_org_test_dummy", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(fixture)
+	})
+
+	got := wantOK(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"charges"}}))
+	for _, m := range hostOnlyMarkers {
+		if strings.Contains(got, m) {
+			t.Errorf("output mentions %s:\n%s", m, got)
+		}
+	}
+
+	want := "## charges\nTo charge a credit or a debit card, you create a charge object.\n\n" +
+		"SQL — Sigma uses Trino SQL.\n\n" +
+		utcNote + "\n\n" +
+		"REPORTING — When you report to the user, always be explicit about the start and end\n" +
+		"times for time-bounded queries. Make sure the user knows when the data is starting and ending.\n\n" +
+		"card_country is the primary geographic signal"
+	if !strings.HasPrefix(got, want) {
+		t.Errorf("text =\n%s\nwant prefix\n%s", got, want)
+	}
+
+	if !strings.Contains(got, "matched the issuer's records.\n\ncolumns:\n- merchant_id varchar -> accounts.id: Field indicating the Stripe merchant ID\n- id varchar primary key: ") {
+		t.Errorf("table-specific notes or columns missing:\n%s", got)
+	}
 }
 
 func TestCSVValue(t *testing.T) {
