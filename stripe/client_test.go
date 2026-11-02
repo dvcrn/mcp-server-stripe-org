@@ -440,3 +440,18 @@ func checkHeaders(t *testing.T, h http.Header, want map[string]string) {
 		}
 	}
 }
+
+func TestValidAccountID(t *testing.T) {
+	for id, want := range map[string]bool{
+		"acct_dummy123":   true,
+		"acct_":           false,
+		"cus_dummy123":    false,
+		"acct_dummy 1":    false,
+		"acct_dummy\r\n1": false,
+		"":                false,
+	} {
+		if got := ValidAccountID(id); got != want {
+			t.Errorf("ValidAccountID(%q) = %v, want %v", id, got, want)
+		}
+	}
+}
