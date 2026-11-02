@@ -6,11 +6,13 @@ import (
 	"fmt"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+
+	"github.com/dvcrn/mcp-server-stripe-org/stripe"
 )
 
 type createCouponInput struct {
 	postInput
-	ID               string            `json:"id,omitempty" jsonschema:"custom coupon ID, e.g. SUMMER25; Stripe generates one when omitted"`
+	ID               string            `json:"id,omitempty" jsonschema:"custom coupon ID of letters, digits, _ or -, e.g. SUMMER25; Stripe generates one when omitted"`
 	Name             string            `json:"name,omitempty" jsonschema:"name shown to customers on invoices and receipts, e.g. Summer sale"`
 	PercentOff       *float64          `json:"percent_off,omitempty" jsonschema:"percentage discount, above 0 and up to 100, e.g. 25; set this or amount_off"`
 	AmountOff        *int64            `json:"amount_off,omitempty" jsonschema:"fixed discount in the currency's smallest unit, e.g. 500 for $5.00; set this or percent_off"`
@@ -46,6 +48,8 @@ func createCoupon(ctx context.Context, env *Env, in createCouponInput) (*mcp.Cal
 // checkCoupon rejects parameter combinations that Stripe refuses.
 func checkCoupon(in createCouponInput) error {
 	switch {
+	case in.ID != "" && !stripe.ValidPathParam(in.ID):
+		return fmt.Errorf("id may contain only letters, digits, _ and - so delete_coupon can address it, got %q", in.ID)
 	case (in.PercentOff == nil) == (in.AmountOff == nil):
 		return errors.New("set exactly one of percent_off or amount_off")
 	case in.PercentOff != nil && (*in.PercentOff <= 0 || *in.PercentOff > 100):

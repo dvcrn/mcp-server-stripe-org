@@ -357,6 +357,8 @@ func TestWriteValidation(t *testing.T) {
 		{"trial_end fraction", "update_subscription", map[string]any{"account": "dummy-one", "subscription": "sub_1", "trial_end": "1767225600.5"}, "trial_end must be"},
 		{"trial_end hex", "update_subscription", map[string]any{"account": "dummy-one", "subscription": "sub_1", "trial_end": "0x10"}, "trial_end must be"},
 		{"trial_end overflow", "update_subscription", map[string]any{"account": "dummy-one", "subscription": "sub_1", "trial_end": "99999999999999999999"}, "trial_end must be"},
+		{"coupon ID with percent sign", "create_coupon", map[string]any{"account": "dummy-one", "id": "25%OFF", "percent_off": 25}, "only letters, digits, _ and -"},
+		{"coupon ID with space", "create_coupon", map[string]any{"account": "dummy-one", "id": "SUMMER 25", "percent_off": 25}, "delete_coupon"},
 		{"coupon without discount", "create_coupon", map[string]any{"account": "dummy-one"}, "exactly one of percent_off or amount_off"},
 		{"coupon with both discounts", "create_coupon", map[string]any{"account": "dummy-one", "percent_off": 10, "amount_off": 100, "currency": "usd"}, "exactly one of"},
 		{"coupon percent over 100", "create_coupon", map[string]any{"account": "dummy-one", "percent_off": 101}, "at most 100"},

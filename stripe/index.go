@@ -172,6 +172,11 @@ func scoreOperation(op *Operation, terms []string) int {
 
 var pathParamPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
+// ValidPathParam reports whether v is accepted as a path parameter by BuildPath.
+func ValidPathParam(v string) bool {
+	return pathParamPattern.MatchString(v)
+}
+
 // IsV2 reports whether the operation is a /v2 endpoint, which DoV2 serves.
 func (op Operation) IsV2() bool {
 	return strings.HasPrefix(op.Path, "/v2/")
@@ -194,7 +199,7 @@ func (op Operation) BuildPath(params map[string]string) (string, error) {
 			return "", fmt.Errorf("%s needs path parameter %q", op.ID, name)
 		}
 
-		if !pathParamPattern.MatchString(value) {
+		if !ValidPathParam(value) {
 			return "", fmt.Errorf("%s: path parameter %q must match ^[A-Za-z0-9_-]+$, got %q", op.ID, name, value)
 		}
 
