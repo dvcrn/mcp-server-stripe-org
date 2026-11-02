@@ -28,7 +28,7 @@ func updateSubscription(ctx context.Context, env *Env, in updateSubscriptionInpu
 		return nil, nil, err
 	}
 
-	return writeV1(ctx, env, "update_subscription", post("/v1/subscriptions/{subscription}", map[string]string{"subscription": in.Subscription}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/subscriptions/{subscription}", map[string]string{"subscription": in.Subscription}, in.postInput, params))
 }
 
 func checkTrialEnd(v string) error {

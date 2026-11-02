@@ -40,5 +40,5 @@ func createRefund(ctx context.Context, env *Env, in createRefundInput) (*mcp.Cal
 		"metadata":       in.Metadata,
 	})
 
-	return writeV1(ctx, env, "create_refund", post("/v1/refunds", nil, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/refunds", nil, in.postInput, params))
 }

@@ -202,8 +202,17 @@ func add[In, Out any](s *mcp.Server, tool *mcp.Tool, h func(context.Context, *En
 			return nil, zero, err
 		}
 
-		return h(ctx, env, in)
+		return h(context.WithValue(ctx, toolKey{}, t.Name), env, in)
 	})
+}
+
+type toolKey struct{}
+
+// toolName returns the name of the tool being called, set by add, for error messages.
+func toolName(ctx context.Context) string {
+	name, _ := ctx.Value(toolKey{}).(string)
+
+	return name
 }
 
 // schemaFor infers T's schema and drops "null" from nilable fields (slices,

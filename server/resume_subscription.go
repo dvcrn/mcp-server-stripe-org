@@ -14,5 +14,5 @@ type resumeSubscriptionInput struct {
 func resumeSubscription(ctx context.Context, env *Env, in resumeSubscriptionInput) (*mcp.CallToolResult, any, error) {
 	params := map[string]any{"cancel_at_period_end": false}
 
-	return writeV1(ctx, env, "resume_subscription", post("/v1/subscriptions/{subscription}", map[string]string{"subscription": in.Subscription}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/subscriptions/{subscription}", map[string]string{"subscription": in.Subscription}, in.postInput, params))
 }

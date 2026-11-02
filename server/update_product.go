@@ -28,5 +28,5 @@ func updateProduct(ctx context.Context, env *Env, in updateProductInput) (*mcp.C
 		return nil, nil, err
 	}
 
-	return writeV1(ctx, env, "update_product", post("/v1/products/{product}", map[string]string{"product": in.Product}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/products/{product}", map[string]string{"product": in.Product}, in.postInput, params))
 }

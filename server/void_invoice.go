@@ -12,5 +12,5 @@ type voidInvoiceInput struct {
 }
 
 func voidInvoice(ctx context.Context, env *Env, in voidInvoiceInput) (*mcp.CallToolResult, any, error) {
-	return writeV1(ctx, env, "void_invoice", post("/v1/invoices/{invoice}/void", map[string]string{"invoice": in.Invoice}, in.postInput, nil))
+	return writeV1(ctx, env, post("/v1/invoices/{invoice}/void", map[string]string{"invoice": in.Invoice}, in.postInput, nil))
 }

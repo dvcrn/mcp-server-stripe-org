@@ -26,5 +26,5 @@ func updateCustomer(ctx context.Context, env *Env, in updateCustomerInput) (*mcp
 		return nil, nil, err
 	}
 
-	return writeV1(ctx, env, "update_customer", post("/v1/customers/{customer}", map[string]string{"customer": in.Customer}, in.postInput, params))
+	return writeV1(ctx, env, post("/v1/customers/{customer}", map[string]string{"customer": in.Customer}, in.postInput, params))
 }
