@@ -178,7 +178,7 @@ func TestRunSQLQueryStillRunning(t *testing.T) {
 	}
 
 	want := "query_run_id: qrun_test_dummy1\naccount: dummy-one\nstatus: running\n" +
-		"The query has not finished. Call get_query_run with this query_run_id and account in about 30 seconds.\n"
+		"The query has not finished. Call get_query_run with this query_run_id and account in 30 to 60 seconds; large queries can take several minutes, so wait longer between later checks.\n"
 	if got != want {
 		t.Errorf("text =\n%s\nwant\n%s", got, want)
 	}
@@ -302,8 +302,10 @@ func TestGetQueryRunRunning(t *testing.T) {
 	cs := connect(t, "sk_org_test_dummy", f.ServeHTTP)
 
 	got := wantOK(t, call(t, cs, "get_query_run", map[string]any{"query_run_id": fakeRunID}))
-	if !strings.Contains(got, "status: running\n") || strings.Contains(got, "account:") {
-		t.Errorf("text = %s", got)
+	want := "query_run_id: " + fakeRunID + "\nstatus: running\n" +
+		"The query has not finished. Call get_query_run with this query_run_id in 30 to 60 seconds; large queries can take several minutes, so wait longer between later checks.\n"
+	if got != want {
+		t.Errorf("text =\n%s\nwant\n%s", got, want)
 	}
 }
 
