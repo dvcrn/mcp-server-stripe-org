@@ -138,17 +138,19 @@ func isEmpty(v any) bool {
 	return false
 }
 
+// readLimit reads params.limit, which arrives untyped, and applies pageLimit.
 func readLimit(v any) (int, error) {
-	if v == nil {
-		return defaultReadLimit, nil
+	var limit *float64
+	if v != nil {
+		f, ok := v.(float64)
+		if !ok || f != math.Trunc(f) {
+			return 0, fmt.Errorf("limit must be a whole number (default %d, max %d), got %v", defaultReadLimit, maxReadLimit, v)
+		}
+
+		limit = &f
 	}
 
-	f, ok := v.(float64)
-	if !ok || f != math.Trunc(f) || f < 1 {
-		return 0, fmt.Errorf("limit must be a positive whole number (values above %d are capped), got %v", maxReadLimit, v)
-	}
-
-	return int(min(f, maxReadLimit)), nil
+	return pageLimit(limit, defaultReadLimit, maxReadLimit)
 }
 
 func listOrNone(names []string) string {

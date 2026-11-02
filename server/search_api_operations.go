@@ -18,7 +18,7 @@ const (
 
 type searchAPIOperationsInput struct {
 	Query string `json:"query" jsonschema:"keywords that must all appear in the operation ID, summary or path, e.g. list invoices"`
-	Limit int    `json:"limit,omitempty" jsonschema:"maximum number of operations to return (default 10, max 50)"`
+	Limit *int   `json:"limit,omitempty" jsonschema:"maximum number of operations to return (default 10, max 50)"`
 }
 
 type operationSummary struct {
@@ -37,12 +37,10 @@ func searchAPIOperations(_ context.Context, _ *Env, in searchAPIOperationsInput)
 		return nil, searchAPIOperationsOutput{}, errors.New(`query is required, e.g. "list invoices"`)
 	}
 
-	limit := in.Limit
-	if limit <= 0 {
-		limit = defaultSearchLimit
+	limit, err := pageLimit(in.Limit, defaultSearchLimit, maxSearchLimit)
+	if err != nil {
+		return nil, searchAPIOperationsOutput{}, err
 	}
-
-	limit = min(limit, maxSearchLimit)
 
 	ops := stripe.SearchOperations(in.Query, limit)
 	out := searchAPIOperationsOutput{Operations: make([]operationSummary, len(ops))}
