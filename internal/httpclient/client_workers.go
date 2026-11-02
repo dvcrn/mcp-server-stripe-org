@@ -38,7 +38,7 @@ func prepareFetch() (http.RoundTripper, func()) {
 		defer fn.Release()
 		res, err := rt.RoundTrip(req)
 		if err == nil && res.StatusCode >= 300 && res.StatusCode < 400 {
-			res.Body.Close()
+			controller.Call("abort")
 			return nil, errRedirect
 		}
 		return res, err
