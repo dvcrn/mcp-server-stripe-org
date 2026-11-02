@@ -137,17 +137,21 @@ func TestToolsRegistered(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	readTools := []string{
+		"api_read", "get_api_operation", "get_query_run", "list_accounts", "list_query_tables", "run_sql_query", "search_api_operations",
+	}
+
 	var names []string
 	for _, tool := range res.Tools {
 		names = append(names, tool.Name)
 
-		if tool.Annotations == nil || !tool.Annotations.ReadOnlyHint {
+		if slices.Contains(readTools, tool.Name) && (tool.Annotations == nil || !tool.Annotations.ReadOnlyHint) {
 			t.Errorf("%s is not annotated read-only", tool.Name)
 		}
 	}
 
 	slices.Sort(names)
-	want := []string{"api_read", "get_api_operation", "get_query_run", "list_accounts", "list_query_tables", "run_sql_query", "search_api_operations"}
+	want := slices.Sorted(slices.Values(append(slices.Clone(readTools), writeToolNames...)))
 	if !slices.Equal(names, want) {
 		t.Errorf("tools = %v, want %v", names, want)
 	}

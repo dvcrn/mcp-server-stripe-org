@@ -81,6 +81,113 @@ func tools(s *mcp.Server) {
 			"Pass `tables` to get those tables' columns, types, keys and usage notes.",
 		Annotations: readOnly(),
 	}, listQueryTables)
+	writeTools(s)
+}
+
+// writeTools registers the curated write tools.
+func writeTools(s *mcp.Server) {
+	add(s, &mcp.Tool{
+		Name:        "update_customer",
+		Description: "Update a customer's email, name, description or metadata. Returns the updated customer.",
+		Annotations: idempotent(),
+	}, updateCustomer)
+
+	add(s, &mcp.Tool{
+		Name: "finalize_invoice",
+		Description: "Finalize a draft invoice so it can be paid or sent. A finalized invoice can no longer be edited, only voided. " +
+			"Returns the invoice.",
+		Annotations: mutating(),
+	}, finalizeInvoice)
+
+	add(s, &mcp.Tool{
+		Name: "send_invoice",
+		Description: "Email an open invoice to its customer. Only works for invoices with collection_method send_invoice. " +
+			"This emails the customer; confirm with the user first. Returns the invoice.",
+		Annotations: mutating(),
+	}, sendInvoice)
+
+	add(s, &mcp.Tool{
+		Name: "void_invoice",
+		Description: "Void a finalized invoice so it can never be paid. This can't be undone; confirm with the user first. " +
+			"Returns the invoice.",
+		Annotations: destructive(),
+	}, voidInvoice)
+
+	add(s, &mcp.Tool{
+		Name: "cancel_subscription",
+		Description: "Cancel a subscription now, or at the end of the current period with at_period_end. " +
+			"Cancelling now can't be undone and stops billing immediately; confirm with the user first. " +
+			"idempotency_key is accepted only with at_period_end. Returns the subscription.",
+		Annotations: destructive(),
+	}, cancelSubscription)
+
+	add(s, &mcp.Tool{
+		Name: "resume_subscription",
+		Description: "Undo a pending cancellation made with cancel_subscription at_period_end, so the subscription renews. " +
+			"It sets cancel_at_period_end to false and leaves any cancel_at date in place. " +
+			"Doesn't apply to subscriptions that are already canceled or paused. Returns the subscription.",
+		Annotations: idempotent(),
+	}, resumeSubscription)
+
+	add(s, &mcp.Tool{
+		Name: "update_subscription",
+		Description: "Update a subscription's metadata or trial end. Changing trial_end moves the billing cycle anchor " +
+			"and can create a prorated invoice; \"now\" ends the trial and bills immediately. Returns the subscription.",
+		Annotations: mutating(),
+	}, updateSubscription)
+
+	add(s, &mcp.Tool{
+		Name: "create_coupon",
+		Description: "Create a coupon with either percent_off or amount_off plus currency. " +
+			"To give customers a code to type, create a promotion code for it with create_promotion_code. Returns the coupon.",
+		Annotations: mutating(),
+	}, createCoupon)
+
+	add(s, &mcp.Tool{
+		Name: "delete_coupon",
+		Description: "Delete a coupon so it can't be redeemed again; existing discounts stay. " +
+			"This can't be undone; confirm with the user first.",
+		Annotations: destructive(),
+	}, deleteCoupon)
+
+	add(s, &mcp.Tool{
+		Name:        "create_promotion_code",
+		Description: "Create a customer-facing promotion code for a coupon. Returns the promotion code, including its promo_ ID.",
+		Annotations: mutating(),
+	}, createPromotionCode)
+
+	add(s, &mcp.Tool{
+		Name:        "update_promotion_code",
+		Description: "Activate or deactivate a promotion code, or change its metadata. Returns the promotion code.",
+		Annotations: idempotent(),
+	}, updatePromotionCode)
+
+	add(s, &mcp.Tool{
+		Name: "create_refund",
+		Description: "Refund a payment intent or charge, in full or for part of the amount. " +
+			"This returns money to the customer and can't be undone; confirm with the user first, including the payment and amount. " +
+			"Pass an idempotency_key so a retried call can't refund twice. Returns the refund.",
+		Annotations: destructive(),
+	}, createRefund)
+
+	add(s, &mcp.Tool{
+		Name:        "update_product",
+		Description: "Update a product's name, description, active state, default price or metadata. Returns the product.",
+		Annotations: idempotent(),
+	}, updateProduct)
+
+	add(s, &mcp.Tool{
+		Name: "update_price",
+		Description: "Update a price's active state, nickname, lookup key or metadata. A price's amount can't change; " +
+			"archive it and create a new one instead. Returns the price.",
+		Annotations: idempotent(),
+	}, updatePrice)
+
+	add(s, &mcp.Tool{
+		Name:        "update_feature",
+		Description: "Update an entitlement feature's name, active state or metadata. Returns the feature.",
+		Annotations: idempotent(),
+	}, updateFeature)
 }
 
 // add registers a tool whose handler receives the request's Env. An Out of
@@ -144,6 +251,11 @@ func readOnly() *mcp.ToolAnnotations {
 
 func mutating() *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{DestructiveHint: ptr(false), OpenWorldHint: ptr(true)}
+}
+
+// idempotent marks a non-destructive write that has no further effect when repeated with the same arguments.
+func idempotent() *mcp.ToolAnnotations {
+	return &mcp.ToolAnnotations{DestructiveHint: ptr(false), IdempotentHint: true, OpenWorldHint: ptr(true)}
 }
 
 func destructive() *mcp.ToolAnnotations {
