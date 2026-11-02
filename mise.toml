@@ -2,6 +2,9 @@
 go = "1.26.3"
 wrangler = "4.156.1"
 
+[env]
+CLOUDFLARE_ACCOUNT_ID = "02c07a2514d9a25f58c78a180bb8c6f3"
+
 [tasks.test]
 description = "Run Go tests"
 run = "go test ./..."
