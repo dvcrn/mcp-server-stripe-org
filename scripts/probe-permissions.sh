@@ -8,6 +8,7 @@
 set -euo pipefail
 
 readonly API="https://api.stripe.com"
+# Must match stripe.APIVersion and stripe.PreviewAPIVersion; stripe/probe_script_test.go checks this.
 readonly STRIPE_VERSION="2026-10-28.endive"
 readonly PREVIEW_VERSION="2026-10-28.preview"
 
