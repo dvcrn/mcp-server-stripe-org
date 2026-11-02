@@ -30,7 +30,7 @@ const (
 var queryRunIDPattern = regexp.MustCompile(`^qrun_[A-Za-z0-9_]+$`)
 
 // queryRun holds the fields of a v2.data.query_run the tools read. The
-// result's file download URL is deliberately not decoded.
+// result's file download URL is not decoded so the tools never hand out download links.
 type queryRun struct {
 	ID            string `json:"id"`
 	Status        string `json:"status"`
@@ -106,16 +106,13 @@ func fetchQueryRun(ctx context.Context, env *Env, account, id string, limit int,
 func queryRunResult(run *queryRun, accountRef string) (*mcp.CallToolResult, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "query_run_id: %s\n", run.ID)
+	followUp := "get_query_run with this query_run_id"
 	if accountRef != "" {
 		fmt.Fprintf(&b, "account: %s\n", accountRef)
+		followUp += " and account"
 	}
 
 	fmt.Fprintf(&b, "status: %s\n", run.Status)
-
-	followUp := "get_query_run with this query_run_id"
-	if accountRef != "" {
-		followUp += " and account"
-	}
 
 	switch {
 	case run.Status == statusSucceeded && hasInline(run):
