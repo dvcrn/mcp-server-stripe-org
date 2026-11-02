@@ -81,11 +81,7 @@ func tools(s *mcp.Server) {
 			"Pass `tables` to get those tables' columns, types, keys and usage notes.",
 		Annotations: readOnly(),
 	}, listQueryTables)
-	writeTools(s)
-}
 
-// writeTools registers the curated write tools.
-func writeTools(s *mcp.Server) {
 	add(s, &mcp.Tool{
 		Name:        "update_customer",
 		Description: "Update a customer's email, name, description or metadata. Returns the updated customer.",
