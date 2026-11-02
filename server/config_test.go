@@ -17,8 +17,8 @@ func TestNewEnvErrors(t *testing.T) {
 		{"not json", "sk_org_test_dummy", "dummy-one=acct_1", "JSON array"},
 		{"bad id", "sk_org_test_dummy", `[{"alias":"a","account":"cus_1"}]`, "not an acct_ ID"},
 		{"bad alias", "sk_org_test_dummy", `[{"alias":"A B","account":"acct_1"}]`, "alias"},
-		{"duplicate alias", "sk_org_test_dummy", `[{"alias":"a","account":"acct_1"},{"alias":"a","account":"acct_2"}]`, "twice"},
-		{"duplicate id", "sk_org_test_dummy", `[{"alias":"a","account":"acct_1"},{"alias":"b","account":"acct_1"}]`, "twice"},
+		{"duplicate alias", "sk_org_test_dummy", `[{"alias":"a","account":"acct_1"},{"alias":"a","account":"acct_2"}]`, "more than once"},
+		{"duplicate id", "sk_org_test_dummy", `[{"alias":"a","account":"acct_1"},{"alias":"b","account":"acct_1"}]`, "more than once"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := NewEnv(tc.key, tc.accounts, http.DefaultClient)

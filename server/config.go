@@ -39,7 +39,7 @@ var (
 	aliasPattern     = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 )
 
-// NewEnv validates the values of STRIPE_ORG_KEY and STRIPE_ACCOUNTS.
+// NewEnv builds an Env from the STRIPE_ORG_KEY and STRIPE_ACCOUNTS values, validating both.
 func NewEnv(key, accountsJSON string, httpClient *http.Client, opts ...stripe.Option) (*Env, error) {
 	livemode, err := keyLivemode(key)
 	if err != nil {
@@ -93,7 +93,7 @@ func parseAccounts(raw string) ([]Account, error) {
 	seen := map[string]bool{}
 	for _, a := range accounts {
 		if !aliasPattern.MatchString(a.Alias) {
-			return nil, fmt.Errorf("%s: alias %q must be lowercase letters, digits, - or _", EnvAccounts, a.Alias)
+			return nil, fmt.Errorf("%s: alias %q must start with a lowercase letter or digit and contain only lowercase letters, digits, - or _", EnvAccounts, a.Alias)
 		}
 
 		if !accountIDPattern.MatchString(a.Account) {
@@ -101,7 +101,7 @@ func parseAccounts(raw string) ([]Account, error) {
 		}
 
 		if seen[a.Alias] || seen[a.Account] {
-			return nil, fmt.Errorf("%s lists %q or %q twice", EnvAccounts, a.Alias, a.Account)
+			return nil, fmt.Errorf("%s: alias %q or account %q appears more than once", EnvAccounts, a.Alias, a.Account)
 		}
 
 		seen[a.Alias], seen[a.Account] = true, true

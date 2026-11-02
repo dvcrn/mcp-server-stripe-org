@@ -16,7 +16,7 @@ const (
 
 type searchAPIOperationsInput struct {
 	Query string `json:"query" jsonschema:"keywords that must all appear in the operation ID, summary or path, e.g. list invoices"`
-	Limit int    `json:"limit,omitempty" jsonschema:"maximum results, default 10, max 50"`
+	Limit int    `json:"limit,omitempty" jsonschema:"maximum number of operations to return (default 10, max 50)"`
 }
 
 type operationSummary struct {

@@ -45,7 +45,7 @@ func tools(s *mcp.Server) {
 
 	add(s, &mcp.Tool{
 		Name:        "get_api_operation",
-		Description: "Show a Stripe GET operation's path parameters and query parameters with their types and descriptions, so api_read can be called correctly.",
+		Description: "Show a Stripe GET operation's path parameters, query parameters (types, descriptions, required, enums) and whether api_read needs an account.",
 		Annotations: readOnly(),
 	}, getAPIOperation)
 
@@ -54,7 +54,7 @@ func tools(s *mcp.Server) {
 		Description: "Call a Stripe GET operation by its operation ID and return the raw JSON response. " +
 			"Find IDs with search_api_operations and parameters with get_api_operation. " +
 			"`account` is required for /v1 operations; /v2 operations without it run across the whole organization. " +
-			"List operations return 10 items unless params.limit is set (max 100); page with starting_after.",
+			"List operations return 10 items unless params.limit is set (max 100). Page /v1 lists with params.starting_after.",
 		Annotations: readOnly(),
 	}, apiRead)
 }

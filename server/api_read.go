@@ -114,7 +114,7 @@ func readLimit(v any) (int, error) {
 
 	f, ok := v.(float64)
 	if !ok || f != math.Trunc(f) || f < 1 {
-		return 0, fmt.Errorf("limit must be a whole number from 1 to %d, got %v", maxReadLimit, v)
+		return 0, fmt.Errorf("limit must be a positive whole number (values above %d are capped), got %v", maxReadLimit, v)
 	}
 
 	return int(min(f, maxReadLimit)), nil
