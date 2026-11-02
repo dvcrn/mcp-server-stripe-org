@@ -120,7 +120,7 @@ func queryRunResult(run *queryRun, accountRef string) (*mcp.CallToolResult, erro
 	case run.Status == statusSucceeded:
 		fmt.Fprintf(&b, "Call %s to read the rows.\n", followUp)
 	case isPending(run.Status):
-		fmt.Fprintf(&b, "The query has not finished. Call %s in about 30 seconds.\n", followUp)
+		fmt.Fprintf(&b, "The query has not finished. Call %s in 30 to 60 seconds. Large queries can take several minutes, so wait longer between later checks.\n", followUp)
 	default:
 		return nil, queryRunFailure(run)
 	}

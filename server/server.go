@@ -63,7 +63,7 @@ func tools(s *mcp.Server) {
 		Name: "run_sql_query",
 		Description: "Run a read-only Stripe Sigma SQL query (Trino dialect) and return the first 100 rows as CSV; page through the rest with get_query_run. " +
 			"Find tables and columns with list_query_tables. Without `account` the query covers every account in the organization. " +
-			"Queries often take 30 s or more; if the run has not finished within 10 s this returns its query_run_id and status for get_query_run. " +
+			"Queries often take 20 s to several minutes; if the run has not finished within 10 s this returns its query_run_id and status for get_query_run. " +
 			"Rerunning an identical query reuses the earlier run.",
 		Annotations: readOnly(),
 	}, runSQLQuery)

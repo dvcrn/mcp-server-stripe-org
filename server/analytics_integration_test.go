@@ -120,5 +120,11 @@ func TestLiveListQueryTables(t *testing.T) {
 		t.Errorf("charges columns missing:\n%.2000s", got)
 	}
 
+	for _, m := range hostOnlyMarkers {
+		if strings.Contains(got, m) {
+			t.Errorf("charges output mentions %s:\n%.2000s", m, got)
+		}
+	}
+
 	t.Logf("%.300s", got)
 }

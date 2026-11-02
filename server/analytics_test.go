@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -177,7 +178,7 @@ func TestRunSQLQueryStillRunning(t *testing.T) {
 	}
 
 	want := "query_run_id: qrun_test_dummy1\naccount: dummy-one\nstatus: running\n" +
-		"The query has not finished. Call get_query_run with this query_run_id and account in about 30 seconds.\n"
+		"The query has not finished. Call get_query_run with this query_run_id and account in 30 to 60 seconds. Large queries can take several minutes, so wait longer between later checks.\n"
 	if got != want {
 		t.Errorf("text =\n%s\nwant\n%s", got, want)
 	}
@@ -301,8 +302,10 @@ func TestGetQueryRunRunning(t *testing.T) {
 	cs := connect(t, "sk_org_test_dummy", f.ServeHTTP)
 
 	got := wantOK(t, call(t, cs, "get_query_run", map[string]any{"query_run_id": fakeRunID}))
-	if !strings.Contains(got, "status: running\n") || strings.Contains(got, "account:") {
-		t.Errorf("text = %s", got)
+	want := "query_run_id: " + fakeRunID + "\nstatus: running\n" +
+		"The query has not finished. Call get_query_run with this query_run_id in 30 to 60 seconds. Large queries can take several minutes, so wait longer between later checks.\n"
+	if got != want {
+		t.Errorf("text =\n%s\nwant\n%s", got, want)
 	}
 }
 
@@ -403,6 +406,43 @@ func TestListQueryTablesColumns(t *testing.T) {
 	}
 
 	wantOK(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{" charges "}}))
+}
+
+// TestListQueryTablesStripsHostNotes checks that notes naming tools this
+// server lacks are dropped and the timezone note becomes utcNote.
+func TestListQueryTablesStripsHostNotes(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/charges_schema.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var calls []stripeCall
+	cs := connect(t, "sk_org_test_dummy", recordStripe(&calls, string(fixture)))
+
+	got := wantOK(t, call(t, cs, "list_query_tables", map[string]any{"tables": []any{"charges"}}))
+	if len(calls) != 1 || calls[0] != (stripeCall{schemasPath, "include%5B0%5D=columns&name=charges", ""}) {
+		t.Errorf("calls = %+v", calls)
+	}
+
+	for _, m := range hostOnlyMarkers {
+		if strings.Contains(got, m) {
+			t.Errorf("output mentions %s:\n%s", m, got)
+		}
+	}
+
+	want := "## charges\nTo charge a credit or a debit card, you create a charge object.\n\n" +
+		"SQL — Sigma uses Trino SQL.\n\n" +
+		utcNote + "\n\n" +
+		"REPORTING — When you report to the user, always be explicit about the start and end\n" +
+		"times for time-bounded queries. Make sure the user knows when the data is starting and ending.\n\n" +
+		"card_country is the primary geographic signal"
+	if !strings.HasPrefix(got, want) {
+		t.Errorf("text =\n%s\nwant prefix\n%s", got, want)
+	}
+
+	if !strings.Contains(got, "matched the issuer's records.\n\ncolumns:\n- merchant_id varchar -> accounts.id: Field indicating the Stripe merchant ID\n- id varchar primary key: ") {
+		t.Errorf("table-specific notes or columns missing:\n%s", got)
+	}
 }
 
 func TestCSVValue(t *testing.T) {

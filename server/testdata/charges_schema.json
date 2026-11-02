@@ -1,0 +1,32 @@
+{
+  "data": [
+    {
+      "name": "charges",
+      "description": "To charge a credit or a debit card, you create a charge object.",
+      "extended_description": "use `query_sigma`, or call `get_sql_template` first when `available_templates` are present.\n\nSQL — Sigma uses Trino SQL.\n\nTIMEZONE — every timestamp column is UTC unless the column specifically states\notherwise; the merchant's reporting timezone is\nthe `timezone` attribute of the most recent <message_datetime> tag. Convert filter\nbounds from that timezone to UTC before comparing, and convert returned timestamps\nback to it before bucketing or stating a time.\n\nREPORTING — When you report to the user, always be explicit about the start and end\ntimes for time-bounded queries. Make sure the user knows when the data is starting and ending.\n\n\ncard_country is the primary geographic signal for charge-level country attribution; used in MRR by Country as a fallback when customer.address_country and customer.shipping_address_country are both null. Join with payment_method_details on charges.id = payment_method_details.charge_id to get alternative country signals (link_country, paypal_shipping_country, etc.). outcome_risk_score and outcome_risk_level come from Radar — higher scores indicate higher fraud risk. outcome_network_decline_code contains the raw issuer decline code (e.g. 51 for insufficient funds, 05 for do not honor) useful for decline reason analysis. card_fingerprint is stable across card re-issues — use it to track a card across multiple charges even when card_last4 or card_id changes. card_address_zip_check and card_address_line1_check indicate whether the billing address matched the issuer's records.\n",
+      "columns": [
+        {
+          "name": "merchant_id",
+          "type": "varchar",
+          "description": "Field indicating the Stripe merchant ID",
+          "is_primary_key": false,
+          "foreign_keys_to": [
+            {
+              "column": "id",
+              "schema": "schema_dummy",
+              "schema_name": "accounts"
+            }
+          ]
+        },
+        {
+          "name": "id",
+          "type": "varchar",
+          "description": "Unique identifier for the object.",
+          "is_primary_key": true,
+          "foreign_keys_to": []
+        }
+      ]
+    }
+  ],
+  "next_page_url": null
+}
