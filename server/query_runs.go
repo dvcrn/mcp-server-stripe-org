@@ -125,7 +125,7 @@ func queryRunResult(run *queryRun, accountRef string) (*mcp.CallToolResult, erro
 		return nil, queryRunFailure(run)
 	}
 
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: b.String()}}}, nil
+	return textResult(b.String()), nil
 }
 
 func queryRunFailure(run *queryRun) error {

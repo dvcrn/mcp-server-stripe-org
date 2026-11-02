@@ -245,6 +245,11 @@ func dropNull(s *jsonschema.Schema) {
 	}
 }
 
+// textResult returns text as the tool's only content, with no structured copy.
+func textResult(text string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}
+}
+
 func readOnly() *mcp.ToolAnnotations {
 	return &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: ptr(true)}
 }
