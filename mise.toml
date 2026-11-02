@@ -60,7 +60,7 @@ GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/worker
 description = "Probe the Stripe org key's permissions without changing anything"
 usage = '''
 flag "-P --profile <profile>" help="fnox profile to load STRIPE_ORG_KEY from"
-arg "[account]" help="acct_ ID to send as Stripe-Context (default: $STRIPE_PROBE_ACCOUNT)"
+arg "[account]" help="acct_ ID to send as Stripe-Context (default: $STRIPE_TEST_ACCOUNT)"
 '''
 run = """
 if [ -n "${usage_profile:-}" ]; then

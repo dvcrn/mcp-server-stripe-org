@@ -2,8 +2,8 @@
 # Probes which Stripe endpoints the org key can reach without modifying account data.
 #
 # Usage: probe-permissions.sh [acct_…]
-#   The account defaults to $STRIPE_PROBE_ACCOUNT. Account IDs stay out of this public repo, so set it
-#   through fnox (the cloud profile has the sandbox one) or pass it as an argument.
+#   The account defaults to $STRIPE_TEST_ACCOUNT, which only the fnox cloud profile sets. Account IDs
+#   stay out of this public repo, so anywhere else pass the account as an argument.
 #   STRIPE_ORG_KEY must be set, e.g. via `fnox exec -- scripts/probe-permissions.sh`.
 set -euo pipefail
 
@@ -16,9 +16,9 @@ if [[ -z "${STRIPE_ORG_KEY:-}" ]]; then
 	exit 2
 fi
 
-account="${1:-${STRIPE_PROBE_ACCOUNT:-}}"
+account="${1:-${STRIPE_TEST_ACCOUNT:-}}"
 if [[ -z "$account" ]]; then
-	echo "no account: pass one, e.g. 'mise run probe acct_…', or set STRIPE_PROBE_ACCOUNT" >&2
+	echo "no account: pass one, e.g. 'mise run probe acct_…', or set STRIPE_TEST_ACCOUNT" >&2
 	exit 2
 fi
 if [[ ! "$account" =~ ^acct_[A-Za-z0-9]+$ ]]; then
