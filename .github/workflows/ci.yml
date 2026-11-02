@@ -14,11 +14,11 @@ concurrency:
 
 jobs:
   ci:
-    # The arm64 image ships gcc, which go test -race needs for cgo.
+    # go test -race needs gcc for cgo, so this needs a full runner image.
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 15
     env:
-      # Without this, mise install and mise run also install wrangler, which no CI task uses.
+      # No CI task uses wrangler, so skip installing it.
       MISE_DISABLE_TOOLS: wrangler
     steps:
       - uses: actions/checkout@v6
