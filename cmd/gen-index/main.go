@@ -10,10 +10,11 @@ import (
 	"fmt"
 	"html"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -159,11 +160,11 @@ func buildIndex(s *spec) []stripe.Operation {
 			}
 		}
 
-		sort.Slice(entry.QueryParams, func(i, j int) bool { return entry.QueryParams[i].Name < entry.QueryParams[j].Name })
+		slices.SortFunc(entry.QueryParams, func(a, b stripe.Param) int { return strings.Compare(a.Name, b.Name) })
 		ops = append(ops, entry)
 	}
 
-	sort.Slice(ops, func(i, j int) bool { return ops[i].ID < ops[j].ID })
+	slices.SortFunc(ops, func(a, b stripe.Operation) int { return strings.Compare(a.ID, b.ID) })
 	return ops
 }
 
@@ -194,7 +195,7 @@ func typeName(s *spec, sc *schema) string {
 	if variants := variants(sc); len(variants) > 0 {
 		var names []string
 		for _, v := range variants {
-			if name := typeName(s, v); !contains(names, name) {
+			if name := typeName(s, v); !slices.Contains(names, name) {
 				names = append(names, name)
 			}
 		}
@@ -210,13 +211,7 @@ func typeName(s *spec, sc *schema) string {
 			return "object"
 		}
 
-		keys := make([]string, 0, len(sc.Properties))
-		for k := range sc.Properties {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-
-		return "object{" + strings.Join(keys, ",") + "}"
+		return "object{" + strings.Join(slices.Sorted(maps.Keys(sc.Properties)), ",") + "}"
 	case "":
 		return "any"
 	default:
@@ -232,14 +227,14 @@ func enumValues(s *spec, sc *schema) []string {
 
 	var out []string
 	for _, v := range sc.Enum {
-		if str, ok := v.(string); ok && str != "" && !contains(out, str) {
+		if str, ok := v.(string); ok && str != "" && !slices.Contains(out, str) {
 			out = append(out, str)
 		}
 	}
 
 	for _, variant := range variants(sc) {
 		for _, str := range enumValues(s, variant) {
-			if !contains(out, str) {
+			if !slices.Contains(out, str) {
 				out = append(out, str)
 			}
 		}
@@ -272,14 +267,4 @@ func shortDescription(desc string) string {
 
 func variants(sc *schema) []*schema {
 	return append(append([]*schema(nil), sc.AnyOf...), sc.OneOf...)
-}
-
-func contains(list []string, s string) bool {
-	for _, v := range list {
-		if v == s {
-			return true
-		}
-	}
-
-	return false
 }
