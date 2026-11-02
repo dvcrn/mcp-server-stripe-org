@@ -116,13 +116,18 @@ func queryParams(op stripe.Operation, in map[string]any) (map[string]any, error)
 // the model's context. A path is blocked if any of its dot-separated segments
 // is listed, so data.number on a list and number on a retrieve are both caught.
 var blockedFields = map[string]string{
-	"number":           "Issuing card numbers and Identity document numbers",
-	"cvc":              "Issuing card CVCs",
-	"verified_outputs": "Identity verified personal data",
-	"dob":              "dates of birth from Identity",
-	"id_number":        "government ID numbers from Identity",
-	"expiration_date":  "Identity document expiry dates",
-	"account_number":   "full bank account numbers",
+	"number":                  "Issuing card numbers and Identity document numbers",
+	"cvc":                     "Issuing card CVCs",
+	"network_data":            "device IP, phone and location from Issuing tokens",
+	"verified_outputs":        "Identity verified personal data",
+	"provided_details":        "email and phone of the person Identity verifies",
+	"dob":                     "dates of birth from Identity",
+	"id_number":               "government ID numbers from Identity",
+	"expiration_date":         "Identity document expiry dates",
+	"sex":                     "sex from Identity documents",
+	"unparsed_sex":            "sex from Identity documents",
+	"unparsed_place_of_birth": "places of birth from Identity documents",
+	"account_number":          "full bank account numbers",
 }
 
 // fieldPathPattern is the shape of every Stripe expand and include path. Anything
