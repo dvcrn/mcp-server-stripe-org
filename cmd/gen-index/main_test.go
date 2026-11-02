@@ -24,7 +24,9 @@ const fixtureSpec = `{
         ]
       },
       "post": {"operationId": "PostWidgetsWidget", "summary": "Update a widget"}
-    }
+    },
+    "/v1/apps/secrets": {"get": {"operationId": "GetAppsSecrets", "summary": "List secrets"}},
+    "/v1/apps/secrets/find": {"get": {"operationId": "GetAppsSecretsFind", "summary": "Find a Secret"}}
   }
 }`
 
@@ -36,7 +38,7 @@ func TestBuildIndex(t *testing.T) {
 
 	ops := buildIndex(&s)
 	if len(ops) != 1 {
-		t.Fatalf("got %d operations, want only the GET", len(ops))
+		t.Fatalf("got %d operations, want only the non-denied GET", len(ops))
 	}
 
 	op := ops[0]

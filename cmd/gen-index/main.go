@@ -25,6 +25,12 @@ const specURL = "https://raw.githubusercontent.com/stripe/openapi/51610f5f061c97
 
 const maxDescription = 160
 
+// deniedPathPrefixes keeps GET endpoints that return secret values out of the
+// index, so api_read cannot call them whatever the key's permissions are.
+var deniedPathPrefixes = []string{
+	"/v1/apps/secrets", // Stripe Apps secrets; expand=payload returns the secret value
+}
+
 type spec struct {
 	Info struct {
 		Version string `json:"version"`
@@ -133,7 +139,7 @@ func buildIndex(s *spec) []stripe.Operation {
 	var ops []stripe.Operation
 	for path, methods := range s.Paths {
 		op, ok := methods["get"]
-		if !ok {
+		if !ok || denied(path) {
 			continue
 		}
 
@@ -159,6 +165,16 @@ func buildIndex(s *spec) []stripe.Operation {
 
 	sort.Slice(ops, func(i, j int) bool { return ops[i].ID < ops[j].ID })
 	return ops
+}
+
+func denied(path string) bool {
+	for _, prefix := range deniedPathPrefixes {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func resolve(s *spec, sc *schema) *schema {
