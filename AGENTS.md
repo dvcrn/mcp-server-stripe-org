@@ -1,0 +1,5 @@
+- gh repo is `dvcrn/mcp-server-stripe-org`
+- golang package is `github.com/dvcrn/mcp-server-stripe-org`
+- Docs
+  - Docs root is in Obsidian (use MCP to access) under `Projects/mcp-server-stripe-org/`
+  - design doc is at `/designdoc`
