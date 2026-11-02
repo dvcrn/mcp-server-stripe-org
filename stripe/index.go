@@ -6,6 +6,9 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -165,4 +168,46 @@ func scoreOperation(op *Operation, terms []string) int {
 	}
 
 	return total
+}
+
+var pathParamPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+
+// IsV2 reports whether the operation is a /v2 endpoint, which DoV2 serves.
+func (op Operation) IsV2() bool {
+	return strings.HasPrefix(op.Path, "/v2/")
+}
+
+// BuildPath fills the operation's path template with params. Every declared
+// parameter must be present and match ^[A-Za-z0-9_-]+$, and no undeclared
+// parameter is accepted, so a value can never add or change path segments.
+func (op Operation) BuildPath(params map[string]string) (string, error) {
+	for name := range params {
+		if !slices.Contains(op.PathParams, name) {
+			return "", fmt.Errorf("%s has no path parameter %q; it takes %s", op.ID, name, listOrNone(op.PathParams))
+		}
+	}
+
+	path := op.Path
+	for _, name := range op.PathParams {
+		value := params[name]
+		if value == "" {
+			return "", fmt.Errorf("%s needs path parameter %q", op.ID, name)
+		}
+
+		if !pathParamPattern.MatchString(value) {
+			return "", fmt.Errorf("%s: path parameter %q must match ^[A-Za-z0-9_-]+$, got %q", op.ID, name, value)
+		}
+
+		path = strings.Replace(path, "{"+name+"}", url.PathEscape(value), 1)
+	}
+
+	return path, nil
+}
+
+func listOrNone(names []string) string {
+	if len(names) == 0 {
+		return "none"
+	}
+
+	return strings.Join(names, ", ")
 }
