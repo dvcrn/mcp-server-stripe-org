@@ -29,6 +29,22 @@ func TestLookupOperation(t *testing.T) {
 	}
 }
 
+func TestIndexExcludesAppsSecrets(t *testing.T) {
+	loadIndex()
+
+	for _, op := range index.ops {
+		if strings.HasPrefix(op.Path, "/v1/apps/secrets") {
+			t.Errorf("index contains %s (%s)", op.ID, op.Path)
+		}
+	}
+
+	for _, id := range []string{"GetAppsSecrets", "GetAppsSecretsFind"} {
+		if _, ok := LookupOperation(id); ok {
+			t.Errorf("LookupOperation(%q) found it", id)
+		}
+	}
+}
+
 func TestIndexQueryParams(t *testing.T) {
 	op, ok := LookupOperation("GetSubscriptions")
 	if !ok {
