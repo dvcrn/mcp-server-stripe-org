@@ -34,10 +34,7 @@ type Env struct {
 	Livemode bool
 }
 
-var (
-	accountIDPattern = regexp.MustCompile(`^acct_[A-Za-z0-9]+$`)
-	aliasPattern     = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
-)
+var aliasPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]*$`)
 
 // NewEnv builds an Env from the STRIPE_ORG_KEY and STRIPE_ACCOUNTS values, validating both.
 func NewEnv(key, accountsJSON string, httpClient *http.Client, opts ...stripe.Option) (*Env, error) {
@@ -96,7 +93,7 @@ func parseAccounts(raw string) ([]Account, error) {
 			return nil, fmt.Errorf("%s: alias %q must start with a lowercase letter or digit and contain only lowercase letters, digits, - or _", EnvAccounts, a.Alias)
 		}
 
-		if !accountIDPattern.MatchString(a.Account) {
+		if !stripe.ValidAccountID(a.Account) {
 			return nil, fmt.Errorf("%s: account %q for alias %q is not an acct_ ID", EnvAccounts, a.Account, a.Alias)
 		}
 

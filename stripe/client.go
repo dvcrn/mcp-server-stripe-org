@@ -264,8 +264,13 @@ func isPrintableASCII(s string) bool {
 	return true
 }
 
+// ValidAccountID reports whether id is an acct_ ID.
+func ValidAccountID(id string) bool {
+	return accountPattern.MatchString(id)
+}
+
 func checkAccount(account string) error {
-	if !accountPattern.MatchString(account) {
+	if !ValidAccountID(account) {
 		return fmt.Errorf("stripe: invalid account %q, want an acct_ ID", account)
 	}
 

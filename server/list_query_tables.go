@@ -62,7 +62,7 @@ func listQueryTables(ctx context.Context, env *Env, in listQueryTablesInput) (*m
 		return nil, nil, err
 	}
 
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil, nil
+	return textResult(text), nil, nil
 }
 
 func fetchSchemas(ctx context.Context, env *Env, query map[string]any) (*schemaList, error) {

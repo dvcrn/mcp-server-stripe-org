@@ -46,22 +46,13 @@ description = "Upload STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN to the worke
 usage = 'flag "-P --profile <profile>" help="fnox profile to read the secrets from (default: the active profile; a live key needs -P production)"'
 run = 'scripts/worker-secrets.sh ${usage_profile:+-P "$usage_profile"}'
 
-# Skip native test and vet while every package is wasm-only.
 [tasks.test]
 description = "Run Go tests with the race detector"
-run = """
-pkgs="$(go list ./...)"
-if [ -z "$pkgs" ]; then echo 'test: no native packages yet'; exit 0; fi
-go test -race $pkgs
-"""
+run = "go test -race ./..."
 
 [tasks.lint]
 description = "Vet the native and wasm builds"
-run = """
-pkgs="$(go list ./...)"
-if [ -n "$pkgs" ]; then go vet $pkgs; else echo 'lint: no native packages yet'; fi
-GOOS=js GOARCH=wasm go vet ./...
-"""
+run = ["go vet ./...", "GOOS=js GOARCH=wasm go vet ./..."]
 
 [tasks.check]
 description = "Check formatting and that the worker compiles to wasm"

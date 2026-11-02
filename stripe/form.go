@@ -2,9 +2,10 @@ package stripe
 
 import (
 	"fmt"
+	"maps"
 	"math"
 	"net/url"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -19,7 +20,7 @@ import (
 // map[string]any.
 func EncodeForm(params map[string]any) (url.Values, error) {
 	values := url.Values{}
-	for _, key := range sortedKeys(params) {
+	for _, key := range slices.Sorted(maps.Keys(params)) {
 		if err := checkKey(key, key); err != nil {
 			return nil, err
 		}
@@ -82,7 +83,7 @@ func encodeValue(values url.Values, key string, v any) error {
 			}
 		}
 	case map[string]string:
-		for _, k := range sortedKeys(v) {
+		for _, k := range slices.Sorted(maps.Keys(v)) {
 			if err := checkKey(key, k); err != nil {
 				return err
 			}
@@ -90,7 +91,7 @@ func encodeValue(values url.Values, key string, v any) error {
 			values.Set(key+"["+k+"]", v[k])
 		}
 	case map[string]any:
-		for _, k := range sortedKeys(v) {
+		for _, k := range slices.Sorted(maps.Keys(v)) {
 			if err := checkKey(key, k); err != nil {
 				return err
 			}
@@ -126,13 +127,4 @@ func checkKey(parent, key string) error {
 
 func indexKey(key string, i int) string {
 	return key + "[" + strconv.Itoa(i) + "]"
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

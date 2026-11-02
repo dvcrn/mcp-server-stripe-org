@@ -62,7 +62,7 @@ func apiRead(ctx context.Context, env *Env, in apiReadInput) (*mcp.CallToolResul
 		return nil, nil, err
 	}
 
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(body)}}}, nil, nil
+	return textResult(string(body)), nil, nil
 }
 
 // queryParams rejects parameters op does not declare, checks required ones

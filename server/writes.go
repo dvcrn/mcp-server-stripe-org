@@ -60,7 +60,7 @@ func writeV1(ctx context.Context, env *Env, tool string, req writeRequest) (*mcp
 		return nil, nil, err
 	}
 
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: string(body)}}}, nil, nil
+	return textResult(string(body)), nil, nil
 }
 
 func post(path string, ids map[string]string, in postInput, params map[string]any) writeRequest {

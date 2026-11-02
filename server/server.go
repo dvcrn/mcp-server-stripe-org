@@ -81,11 +81,7 @@ func tools(s *mcp.Server) {
 			"Pass `tables` to get those tables' columns, types, keys and usage notes.",
 		Annotations: readOnly(),
 	}, listQueryTables)
-	writeTools(s)
-}
 
-// writeTools registers the curated write tools.
-func writeTools(s *mcp.Server) {
 	add(s, &mcp.Tool{
 		Name:        "update_customer",
 		Description: "Update a customer's email, name, description or metadata. Returns the updated customer.",
@@ -245,21 +241,24 @@ func dropNull(s *jsonschema.Schema) {
 	}
 }
 
+// textResult returns text as the tool's only content, with no structured copy.
+func textResult(text string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}
+}
+
 func readOnly() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{ReadOnlyHint: true, OpenWorldHint: new(true)}
 }
 
 func mutating() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{DestructiveHint: ptr(false), OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{DestructiveHint: new(false), OpenWorldHint: new(true)}
 }
 
 // idempotent marks a non-destructive write that has no further effect when repeated with the same arguments.
 func idempotent() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{DestructiveHint: ptr(false), IdempotentHint: true, OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{DestructiveHint: new(false), IdempotentHint: true, OpenWorldHint: new(true)}
 }
 
 func destructive() *mcp.ToolAnnotations {
-	return &mcp.ToolAnnotations{DestructiveHint: ptr(true), OpenWorldHint: ptr(true)}
+	return &mcp.ToolAnnotations{DestructiveHint: new(true), OpenWorldHint: new(true)}
 }
-
-func ptr[T any](v T) *T { return &v }
