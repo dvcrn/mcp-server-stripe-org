@@ -1,5 +1,4 @@
 {
-  // Top level is the production worker. env.dev is the sandbox worker that agents and tests use.
   "name": "mcp-server-stripe-org",
   "main": "build/worker.mjs",
   "compatibility_date": "2026-11-01",
@@ -13,13 +12,7 @@
   },
   "limits": {
     "cpu_ms": 30000
-  },
-  "env": {
-    "dev": {
-      "name": "mcp-server-stripe-org-dev",
-      "workers_dev": true
-    }
   }
-  // Secrets: STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN (set with `mise run worker-secrets` or `worker-secrets-dev`).
+  // Secrets: STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN (set with `mise run worker-secrets`).
   // STRIPE_ACCOUNTS is a secret rather than a var to keep account IDs out of this public repo.
 }

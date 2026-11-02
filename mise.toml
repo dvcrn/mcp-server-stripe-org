@@ -18,7 +18,7 @@ description = "Regenerate stripe/index.json.gz from the pinned Stripe OpenAPI sp
 run = "go run ./cmd/gen-index"
 
 [tasks.dev-vars]
-description = "Write the gitignored .dev.vars for wrangler dev from the active fnox profile (sandbox key only)"
+description = "Write the gitignored .dev.vars for wrangler dev from the active fnox profile"
 run = '''
 set -eu
 secrets="$(scripts/worker-secrets.sh dev-json)"
@@ -27,32 +27,24 @@ vars="$(printf %s "$secrets" | jq -r '
   | if .value | test("[\n'\'']") then error("\(.key) contains a newline or single quote")
     else "\(.key)='\''\(.value)'\''" end
 ')"
-# wrangler dev --env dev prefers .dev.vars.dev, which would skip the sandbox key check.
-rm -f .dev.vars .dev.vars.dev
+rm -f .dev.vars
 umask 077
 printf '%s\n' "$vars" > .dev.vars
 '''
 
 [tasks.dev]
-description = "Run the dev worker locally with wrangler and .dev.vars"
+description = "Run the worker locally with wrangler using secrets from the active fnox profile"
 depends = ["dev-vars"]
-run = "wrangler dev --env dev"
+run = "wrangler dev"
 
 [tasks.deploy]
-description = "Build and deploy the production worker"
-run = 'fnox -P production exec -- env -u CLOUDFLARE_ENV wrangler deploy --env=""'
-
-[tasks.deploy-dev]
-description = "Build and deploy the dev worker (mcp-server-stripe-org-dev) with the active fnox profile"
-run = "fnox exec -- wrangler deploy --env=dev"
+description = "Build and deploy the worker with the active fnox profile"
+run = "fnox exec -- wrangler deploy"
 
 [tasks.worker-secrets]
-description = "Upload the production fnox profile's secrets to the production worker (live key only)"
-run = "scripts/worker-secrets.sh upload production"
-
-[tasks.worker-secrets-dev]
-description = "Upload the active fnox profile's secrets to the dev worker (sandbox key only)"
-run = "scripts/worker-secrets.sh upload dev"
+description = "Upload STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN to the worker from a fnox profile"
+usage = 'flag "-P --profile <profile>" help="fnox profile to read the secrets from (default: the active profile; a live key needs -P production)"'
+run = 'scripts/worker-secrets.sh ${usage_profile:+-P "$usage_profile"}'
 
 # Skip native test and vet while every package is wasm-only.
 [tasks.test]

@@ -1,61 +1,73 @@
 #!/bin/sh
-# Reads STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN from fnox and uploads them to a worker.
+# Uploads STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN from a fnox profile to the worker.
 #
-# The target picks the fnox profile, the key mode it accepts and the wrangler env together:
-# production reads -P production, needs a live key and targets the top-level worker; dev reads
-# the active profile, needs a test key and targets env.dev. So a sandbox key can't reach the
-# production worker and a live key can't reach dev.
+# A live key is only uploaded with an explicit -P production, so a run on the active profile
+# can't put production credentials on the worker by accident.
 set -eu
+
+self="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+cd "$(dirname "$self")/.."
 
 usage() {
 	cat >&2 <<-'USAGE'
-		Usage: worker-secrets.sh upload production|dev   upload to that worker
-		       worker-secrets.sh dev-json                print the checked dev secrets as JSON
+		Usage: worker-secrets.sh [-P profile]   upload from that fnox profile (default: the active one)
+		       worker-secrets.sh dev-json       print the checked secrets of the active profile as JSON
 	USAGE
 	exit 2
 }
 
 check() {
-	jq -n --arg mode "$1" '
+	jq -n '
 	  $ENV | {STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN}
 	  | [to_entries[] | select(.value == null or .value == "") | .key] as $missing
 	  | if $missing != [] then error("empty in the fnox profile: \($missing | join(", "))") else . end
-	  | if .STRIPE_ORG_KEY | test("^[sr]k_org_\($mode)_") then . else
-	      error("STRIPE_ORG_KEY must be an sk_org_\($mode)_ or rk_org_\($mode)_ key for this worker") end
 	  | .STRIPE_ACCOUNTS |= (fromjson | tojson)
 	'
 }
 
-# Unset first so values from the calling shell can't stand in for ones the profile lacks,
-# and CLOUDFLARE_ENV can't redirect wrangler to the other worker.
+# Unset first so values from the calling shell can't stand in for ones the profile lacks.
 in_profile() {
 	profile="$1"
 	shift
-	env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN -u CLOUDFLARE_ENV \
-		fnox ${profile:+-P "$profile"} exec -- "$0" "$@"
+	env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN \
+		fnox ${profile:+-P "$profile"} exec -- "$self" "$@"
 }
 
 case "${1:-}" in
-upload)
-	case "${2:-}" in
-	production) in_profile production upload-from-env live ;;
-	dev) in_profile "" upload-from-env test ;;
-	*) usage ;;
-	esac
+"")
+	in_profile "" upload-from-env ""
+	;;
+-P)
+	[ -n "${2:-}" ] || usage
+	in_profile "$2" upload-from-env "$2"
 	;;
 dev-json)
-	in_profile "" check-from-env test
+	in_profile "" check-from-env
 	;;
 # Internal: run by in_profile inside fnox exec.
 check-from-env)
-	check "$2"
+	check
 	;;
 upload-from-env)
-	case "$2" in live) wrangler_env= ;; test) wrangler_env=dev ;; *) usage ;; esac
-	secrets="$(check "$2")"
-	# The Stripe secrets reach wrangler only on stdin; --env="" pins production to the top level.
+	profile="${2:-}"
+	secrets="$(check)"
+	case "$STRIPE_ORG_KEY" in
+	sk_org_live_* | rk_org_live_*) mode=live ;;
+	sk_org_test_* | rk_org_test_*) mode=test ;;
+	*)
+		echo "worker-secrets: STRIPE_ORG_KEY is not an organization key" >&2
+		exit 1
+		;;
+	esac
+	worker="$(sed '/^[[:space:]]*\/\//d' wrangler.jsonc | jq -er '.name // empty')"
+	echo "worker-secrets: $mode key from fnox profile ${profile:-${FNOX_PROFILE:-default}} -> worker $worker" >&2
+	if [ "$mode" = live ] && [ "$profile" != production ]; then
+		echo "worker-secrets: refusing to upload a live key without an explicit -P production" >&2
+		exit 1
+	fi
+	# The Stripe secrets reach wrangler only on stdin.
 	printf %s "$secrets" | env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN \
-		wrangler secret bulk --env="$wrangler_env"
+		wrangler secret bulk --name "$worker"
 	;;
 *) usage ;;
 esac
