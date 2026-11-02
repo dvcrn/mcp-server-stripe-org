@@ -2,8 +2,8 @@
 go = "1.26.3"
 wrangler = "4.156.1"
 
-[env]
-CLOUDFLARE_ACCOUNT_ID = "02c07a2514d9a25f58c78a180bb8c6f3"
+# CLOUDFLARE_ACCOUNT_ID stays out of this public repo: cloud agents get it from fnox.cloud.toml
+# (fnox exec), and local machines set it in the gitignored mise.local.toml.
 
 [tasks.build-worker]
 description = "Build the Cloudflare Workers bundle into build/"
