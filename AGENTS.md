@@ -3,3 +3,7 @@
 - Docs
   - Docs root is in Obsidian (use MCP to access) under `Projects/mcp-server-stripe-org/`
   - design doc is at `/designdoc`
+  - When you change the design doc's scope, tools, permissions or plan, add a dated line with the reason to its `## Revisions` section
+- Work is tracked in the Linear project `mcp-server-stripe-org` (team David, issues D-561 to D-568): https://linear.app/digital-vibes/project/mcp-server-stripe-org-3651b057e18f
+  - One issue per deliverable, with blocked-by relations for order. Each issue points to the design doc section it implements.
+  - Keep account IDs, key details and other private specifics in Linear or Obsidian, not in this public repo.
