@@ -1,5 +1,5 @@
 [secrets]
-STRIPE_ORG_KEY = { provider = "1password", value = "op://Dev/Stripe - digital-vibes-org - Cloudflare Stripe proxy sandbox/credential" }
+STRIPE_ORG_KEY = { provider = "1password", value = "op://cloud-dev/Stripe - digital-vibes-org - Cloudflare Stripe proxy sandbox/credential" }
 
 [profiles.production.secrets]
 STRIPE_ORG_KEY = { provider = "1password", value = "op://Dev/Stripe - digital-vibes-org - Cloudflare Stripe proxy/credential" }
