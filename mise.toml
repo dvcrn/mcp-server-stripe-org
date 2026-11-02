@@ -1,0 +1,22 @@
+[tools]
+go = "1.26.3"
+wrangler = "4.156.1"
+
+[tasks.test]
+description = "Run Go tests"
+run = "go test ./..."
+
+[tasks.build-worker]
+description = "Build the Cloudflare Workers bundle into build/"
+run = """
+go run github.com/syumai/workers-go/cmd/workers-assets-gen -mode=go
+GOOS=js GOARCH=wasm go build -ldflags='-s -w' -o ./build/app.wasm ./cmd/worker
+"""
+
+[tasks.worker-dev]
+description = "Run the worker locally with wrangler"
+run = "wrangler dev"
+
+[tasks.deploy-worker]
+description = "Build and deploy the worker"
+run = "wrangler deploy"

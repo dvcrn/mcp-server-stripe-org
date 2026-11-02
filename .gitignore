@@ -2,3 +2,4 @@ fnox.local.toml
 .dev.vars
 build/
 node_modules/
+.wrangler/
