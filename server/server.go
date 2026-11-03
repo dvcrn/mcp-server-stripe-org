@@ -93,7 +93,7 @@ func tools(s *mcp.Server) {
 		Name: "finalize_invoice",
 		Description: "Finalize a draft invoice so it can be paid or sent. A finalized invoice can no longer be edited, only voided. " +
 			"If auto_advance is on (the invoice's own setting unless passed), Stripe then charges the customer's payment method or emails the invoice. " +
-			"This can't be undone; confirm with the user first. Returns the invoice.",
+			"Finalizing can't be undone; confirm with the user first. Returns the invoice.",
 		Annotations: destructive(),
 	}, finalizeInvoice)
 
