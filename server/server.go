@@ -92,15 +92,16 @@ func tools(s *mcp.Server) {
 	add(s, &mcp.Tool{
 		Name: "finalize_invoice",
 		Description: "Finalize a draft invoice so it can be paid or sent. A finalized invoice can no longer be edited, only voided. " +
-			"Returns the invoice.",
-		Annotations: mutating(),
+			"If auto_advance is on (the invoice's own setting unless passed), Stripe then charges the customer's payment method or emails the invoice. " +
+			"This can't be undone; confirm with the user first. Returns the invoice.",
+		Annotations: destructive(),
 	}, finalizeInvoice)
 
 	add(s, &mcp.Tool{
 		Name: "send_invoice",
 		Description: "Email an open invoice to its customer. Only works for invoices with collection_method send_invoice. " +
 			"This emails the customer; confirm with the user first. Returns the invoice.",
-		Annotations: mutating(),
+		Annotations: destructive(),
 	}, sendInvoice)
 
 	add(s, &mcp.Tool{
@@ -129,8 +130,10 @@ func tools(s *mcp.Server) {
 	add(s, &mcp.Tool{
 		Name: "update_subscription",
 		Description: "Update a subscription's metadata or trial end. Changing trial_end moves the billing cycle anchor " +
-			"and can create a prorated invoice; \"now\" ends the trial and bills immediately. Returns the subscription.",
-		Annotations: mutating(),
+			"and can add proration items to the next invoice; \"now\" ends the trial and invoices immediately. " +
+			"Ending or moving the trial can bill the customer, which can't be undone; before changing trial_end, confirm with the user first. " +
+			"Returns the subscription.",
+		Annotations: destructive(),
 	}, updateSubscription)
 
 	add(s, &mcp.Tool{

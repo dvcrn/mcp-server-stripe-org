@@ -17,7 +17,9 @@ var writeToolNames = []string{
 	"update_price", "update_product", "update_promotion_code", "update_subscription", "void_invoice",
 }
 
-var destructiveTools = []string{"cancel_subscription", "create_refund", "delete_coupon", "void_invoice"}
+var destructiveTools = []string{
+	"cancel_subscription", "create_refund", "delete_coupon", "finalize_invoice", "send_invoice", "update_subscription", "void_invoice",
+}
 
 type writeCall struct {
 	method      string
@@ -82,8 +84,12 @@ func TestWriteAnnotations(t *testing.T) {
 			t.Errorf("%s: destructive = %v, want %v", tool.Name, *a.DestructiveHint, destructive)
 		}
 
-		if destructive && (a.IdempotentHint || !strings.Contains(tool.Description, "confirm with the user first")) {
-			t.Errorf("%s: destructive tools must not be idempotent and must ask for confirmation: %q", tool.Name, tool.Description)
+		if destructive && a.IdempotentHint {
+			t.Errorf("%s: destructive tools must not be idempotent", tool.Name)
+		}
+
+		if confirms := strings.Contains(tool.Description, "confirm with the user first"); confirms != destructive {
+			t.Errorf("%s: asks for confirmation = %v, want %v (same as destructive): %q", tool.Name, confirms, destructive, tool.Description)
 		}
 
 		props := tool.InputSchema.(map[string]any)["properties"].(map[string]any)
