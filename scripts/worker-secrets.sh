@@ -1,5 +1,6 @@
 #!/bin/sh
-# Uploads STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN to the worker.
+# Uploads STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN to the worker, plus
+# MCP_READ_TOKEN when the profile defines it.
 #
 #   production: fnox production profile and accounts.json, as Worker secrets. Requires a live key.
 #   preview:    active fnox profile and accounts.sandbox.json, as the Previews base config. Refuses a live key.
@@ -19,17 +20,21 @@ usage() {
 	exit 2
 }
 
-# check <accounts file> prints the three secrets as a JSON object, or fails if any is missing.
+# check <accounts file> prints the secrets as a JSON object, or fails if a required one is missing.
 check() {
 	if [ -f "$1" ]; then
 		STRIPE_ACCOUNTS="$(cat "$1")"
 		export STRIPE_ACCOUNTS
 	fi
 	jq -n --arg file "$1" '
-	  $ENV | {STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN}
+	  ($ENV.MCP_READ_TOKEN // "" | trim) as $read
+	  | $ENV | {STRIPE_ORG_KEY, STRIPE_ACCOUNTS, MCP_TOKEN}
 	  | [to_entries[] | select(.value == null or .value == "") | .key] as $missing
 	  | if $missing != [] then error("missing: \($missing | join(", ")) (STRIPE_ACCOUNTS comes from \($file) or the fnox profile)") else . end
 	  | .STRIPE_ACCOUNTS |= (fromjson | if type == "array" and length > 0 then tojson else error("STRIPE_ACCOUNTS must be a non-empty JSON array") end)
+	  | if $read == "" then .
+	    elif $read == (.MCP_TOKEN | trim) then error("MCP_READ_TOKEN must differ from MCP_TOKEN")
+	    else .MCP_READ_TOKEN = $read end
 	'
 }
 
@@ -48,7 +53,7 @@ key_mode() {
 in_profile() {
 	profile="$1"
 	shift
-	env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN \
+	env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN -u MCP_READ_TOKEN \
 		fnox ${profile:+-P "$profile"} exec -- "$self" "$@"
 }
 
@@ -77,10 +82,10 @@ upload-from-env)
 	fi
 	# The secrets reach wrangler only on stdin.
 	if [ "$target" = production ]; then
-		printf %s "$secrets" | env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN \
+		printf %s "$secrets" | env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN -u MCP_READ_TOKEN \
 			wrangler secret bulk --name "$worker"
 	else
-		printf %s "$secrets" | env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN \
+		printf %s "$secrets" | env -u STRIPE_ORG_KEY -u STRIPE_ACCOUNTS -u MCP_TOKEN -u MCP_READ_TOKEN \
 			wrangler preview base-config secret bulk --worker-name "$worker"
 	fi
 	;;

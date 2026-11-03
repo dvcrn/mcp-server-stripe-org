@@ -13,7 +13,7 @@ import (
 // Handler serves GET /health and the MCP endpoint at /mcp. getenv is called
 // per request, so the worker can pass cloudflare.Getenv.
 func Handler(getenv func(string) string) http.Handler {
-	mcpHandler := mcp.NewStreamableHTTPHandler(func(*http.Request) *mcp.Server { return New() }, &mcp.StreamableHTTPOptions{
+	mcpHandler := mcp.NewStreamableHTTPHandler(serverFrom, &mcp.StreamableHTTPOptions{
 		Stateless:    true,
 		JSONResponse: true,
 		// Access is gated by the token, and deployments sit behind proxies that forward a public Host.

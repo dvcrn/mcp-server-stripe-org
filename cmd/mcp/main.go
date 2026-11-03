@@ -33,8 +33,13 @@ func main() {
 		log.Fatal(err)
 	}
 
+	srv, err := server.StdioServer(os.Getenv)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	ctx := server.WithEnv(context.Background(), env)
-	if err := server.New().Run(ctx, &mcp.StdioTransport{}); err != nil {
+	if err := srv.Run(ctx, &mcp.StdioTransport{}); err != nil {
 		log.Fatal(err)
 	}
 }

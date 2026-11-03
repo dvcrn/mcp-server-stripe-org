@@ -21,7 +21,13 @@ The server reads its configuration from environment variables:
 | ----------------- | ------------ | ----------------------------------------------------------------------------- |
 | `STRIPE_ORG_KEY`  | always       | A Stripe organization key: `sk_org_live_`, `sk_org_test_` or an `rk_org_` key |
 | `STRIPE_ACCOUNTS` | always       | JSON array of the accounts the tools may act on (see below)                   |
-| `MCP_TOKEN`       | HTTP only    | Bearer token clients must send in `Authorization: Bearer <token>`. Generate one with `openssl rand -hex 32` |
+| `MCP_TOKEN`       | HTTP, unless `MCP_READ_TOKEN` is set | Bearer token for every tool, sent as `Authorization: Bearer <token>` or `X-API-Key`. Generate one with `openssl rand -hex 32` |
+| `MCP_READ_TOKEN`  | HTTP, optional | Bearer token for the read-only tools only. Must differ from `MCP_TOKEN` |
+| `MCP_READ_ONLY`   | optional     | `1` or `true` limits stdio and `MCP_TOKEN` to the read-only tools. A value that isn't a boolean is a config error |
+
+Over HTTP, set `MCP_TOKEN`, `MCP_READ_TOKEN` or both. With only `MCP_READ_TOKEN`, the server is read-only.
+
+The read-only tools are the ones annotated `readOnlyHint`: `list_accounts`, `search_api_operations`, `get_api_operation`, `api_read`, `run_sql_query`, `get_query_run` and `list_query_tables`. With the read token, write tools are left out of `tools/list` and calling one fails as an unknown tool.
 
 `STRIPE_ACCOUNTS` lists each account with a lowercase alias, a display name and its `acct_` ID:
 
@@ -97,7 +103,7 @@ To serve HTTP at `http://localhost:8080/mcp` instead:
 
 ```sh
 docker run --rm -p 8080:8080 \
-  -e STRIPE_ORG_KEY -e STRIPE_ACCOUNTS -e MCP_TOKEN \
+  -e STRIPE_ORG_KEY -e STRIPE_ACCOUNTS -e MCP_TOKEN -e MCP_READ_TOKEN \
   ghcr.io/dvcrn/mcp-server-stripe-org:latest
 ```
 
@@ -109,7 +115,7 @@ Log in with `wrangler login` (or set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCO
 cp accounts.example.json accounts.json
 ```
 
-Generate a random `MCP_TOKEN` and keep it, because clients send it as their bearer token:
+Generate a random `MCP_TOKEN` and keep it, because clients send it as their bearer token. For read-only clients, generate a second one for `MCP_READ_TOKEN`:
 
 ```sh
 openssl rand -hex 32
@@ -120,15 +126,16 @@ Then set the secrets and deploy:
 ```sh
 wrangler secret put STRIPE_ORG_KEY
 wrangler secret put MCP_TOKEN
+wrangler secret put MCP_READ_TOKEN   # optional
 mise run worker-accounts   # uploads accounts.json as STRIPE_ACCOUNTS
 wrangler deploy
 ```
 
 Run `mise run worker-accounts` again whenever `accounts.json` changes. The new list takes effect without a redeploy.
 
-`wrangler deploy` builds the Go wasm bundle through `mise run build-worker`. The MCP endpoint is `https://<worker>.<subdomain>.workers.dev/mcp`, and requests without the `MCP_TOKEN` bearer token are rejected.
+`wrangler deploy` builds the Go wasm bundle through `mise run build-worker`. The MCP endpoint is `https://<worker>.<subdomain>.workers.dev/mcp`, and requests without the `MCP_TOKEN` or `MCP_READ_TOKEN` bearer token are rejected.
 
-To use it from Claude Code, add it to `.mcp.json`:
+To use it from Claude Code, add it to `.mcp.json`. `stripe-org-readonly` is the same URL with the read token, so enable whichever connector a session or routine should have:
 
 ```json
 {
@@ -137,6 +144,11 @@ To use it from Claude Code, add it to `.mcp.json`:
       "type": "http",
       "url": "https://<worker>.<subdomain>.workers.dev/mcp",
       "headers": { "Authorization": "Bearer ${MCP_TOKEN}" }
+    },
+    "stripe-org-readonly": {
+      "type": "http",
+      "url": "https://<worker>.<subdomain>.workers.dev/mcp",
+      "headers": { "Authorization": "Bearer ${MCP_READ_TOKEN}" }
     }
   }
 }
