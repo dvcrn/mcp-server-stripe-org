@@ -32,14 +32,20 @@ func connect(t *testing.T, key string, upstream http.HandlerFunc) *mcp.ClientSes
 		t.Fatal(err)
 	}
 
-	return connectEnv(t, WithEnv(context.Background(), env))
+	return connectServer(t, New(), WithEnv(context.Background(), env))
 }
 
 func connectEnv(t *testing.T, ctx context.Context) *mcp.ClientSession {
 	t.Helper()
 
+	return connectServer(t, New(), ctx)
+}
+
+func connectServer(t *testing.T, srv *mcp.Server, ctx context.Context) *mcp.ClientSession {
+	t.Helper()
+
 	st, ct := mcp.NewInMemoryTransports()
-	ss, err := New().Connect(ctx, st, nil)
+	ss, err := srv.Connect(ctx, st, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -157,6 +163,22 @@ func TestToolsRegistered(t *testing.T) {
 	}
 }
 
+func TestEveryToolIsAnnotated(t *testing.T) {
+	cs := connect(t, "sk_org_test_dummy", noStripe(t))
+
+	res, err := cs.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// A tool without annotations would silently drop out of the read-only server.
+	for _, tool := range res.Tools {
+		if tool.Annotations == nil {
+			t.Errorf("%s has no annotations", tool.Name)
+		}
+	}
+}
+
 func TestNoNullInSchemas(t *testing.T) {
 	cs := connect(t, "sk_org_test_dummy", noStripe(t))
 
@@ -176,8 +198,12 @@ func TestNoNullInSchemas(t *testing.T) {
 }
 
 func TestNewIsBuiltOnce(t *testing.T) {
-	if New() != New() {
-		t.Error("New returned different servers")
+	if New() != New() || NewReadOnly() != NewReadOnly() {
+		t.Error("New or NewReadOnly returned different servers")
+	}
+
+	if New() == NewReadOnly() {
+		t.Error("New and NewReadOnly returned the same server")
 	}
 }
 

@@ -14,9 +14,11 @@ import (
 
 // Environment variables the server reads.
 const (
-	EnvOrgKey   = "STRIPE_ORG_KEY"
-	EnvToken    = "MCP_TOKEN"
-	EnvAccounts = "STRIPE_ACCOUNTS"
+	EnvOrgKey    = "STRIPE_ORG_KEY"
+	EnvToken     = "MCP_TOKEN"
+	EnvReadToken = "MCP_READ_TOKEN"
+	EnvReadOnly  = "MCP_READ_ONLY"
+	EnvAccounts  = "STRIPE_ACCOUNTS"
 )
 
 // Account is one entry of STRIPE_ACCOUNTS, the accounts tools may act on.

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -14,42 +16,85 @@ import (
 )
 
 var (
-	serverOnce sync.Once
-	server     *mcp.Server
+	fullServer     = sync.OnceValue(func() *mcp.Server { return newServer(false) })
+	readOnlyServer = sync.OnceValue(func() *mcp.Server { return newServer(true) })
 )
 
-// New returns the MCP server. Tool schemas are built once per process (one
-// Workers isolate); per-request config comes from the context, see WithEnv.
-func New() *mcp.Server {
-	serverOnce.Do(func() {
-		server = mcp.NewServer(&mcp.Implementation{Name: "stripe-org", Version: "0.1.0"}, nil)
-		tools(server)
-	})
+// New returns the MCP server with every tool. Tool schemas are built once per
+// process (one Workers isolate); per-request config comes from the context,
+// see WithEnv.
+func New() *mcp.Server { return fullServer() }
 
-	return server
+// NewReadOnly returns the MCP server with only the tools annotated read-only.
+func NewReadOnly() *mcp.Server { return readOnlyServer() }
+
+// StdioServer returns the server for stdio, which has no token: the
+// read-only one when MCP_READ_ONLY is set, otherwise the full one.
+func StdioServer(getenv func(string) string) (*mcp.Server, error) {
+	readOnly, err := readOnlyFromEnv(getenv)
+	if err != nil {
+		return nil, err
+	}
+
+	if readOnly {
+		return NewReadOnly(), nil
+	}
+
+	return New(), nil
 }
 
-func tools(s *mcp.Server) {
-	add(s, &mcp.Tool{
+// readOnlyFromEnv reports whether MCP_READ_ONLY limits the server to the
+// read-only tools. A value that isn't a boolean is an error, so a typo
+// can't silently allow writes.
+func readOnlyFromEnv(getenv func(string) string) (bool, error) {
+	v := strings.TrimSpace(getenv(EnvReadOnly))
+	if v == "" {
+		return false, nil
+	}
+
+	readOnly, err := strconv.ParseBool(v)
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean such as 1 or 0, got %q", EnvReadOnly, v)
+	}
+
+	return readOnly, nil
+}
+
+func newServer(readOnly bool) *mcp.Server {
+	s := mcp.NewServer(&mcp.Implementation{Name: "stripe-org", Version: "0.1.0"}, nil)
+	tools(registry{s, readOnly})
+
+	return s
+}
+
+// registry is the server tools are added to. A read-only registry skips
+// every tool not annotated read-only.
+type registry struct {
+	s        *mcp.Server
+	readOnly bool
+}
+
+func tools(r registry) {
+	add(r, &mcp.Tool{
 		Name:        "list_accounts",
-		Description: "List the Stripe accounts this server can read and write, with the alias to pass as `account` to other tools and whether the key is live or sandbox.",
+		Description: "List the Stripe accounts this server can act on, with the alias to pass as `account` to other tools and whether the key is live or sandbox.",
 		Annotations: readOnly(),
 	}, listAccounts)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "search_api_operations",
 		Description: "Search the Stripe API's GET operations by keywords, for example \"list invoices\" or \"subscription schedule\". " +
 			"Returns operation IDs to pass to get_api_operation and api_read.",
 		Annotations: readOnly(),
 	}, searchAPIOperations)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name:        "get_api_operation",
 		Description: "Show a Stripe GET operation's path parameters, query parameters (types, descriptions, required, enums) and whether api_read needs an account.",
 		Annotations: readOnly(),
 	}, getAPIOperation)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "api_read",
 		Description: "Call a Stripe GET operation by its operation ID and return the raw JSON response. " +
 			"Find IDs with search_api_operations and parameters with get_api_operation. " +
@@ -60,7 +105,7 @@ func tools(s *mcp.Server) {
 		Annotations: readOnly(),
 	}, apiRead)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "run_sql_query",
 		Description: "Run a read-only Stripe Sigma SQL query (Trino dialect) and return the first 100 rows as CSV; page through the rest with get_query_run. " +
 			"Find tables and columns with list_query_tables. Without `account` the query covers every account in the organization. " +
@@ -69,27 +114,27 @@ func tools(s *mcp.Server) {
 		Annotations: readOnly(),
 	}, runSQLQuery)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "get_query_run",
 		Description: "Check a run_sql_query run and return its rows as CSV once it has succeeded. " +
 			"Pass the same `account` the query ran with. Page through results with `page` from next_page.",
 		Annotations: readOnly(),
 	}, getQueryRun)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "list_query_tables",
 		Description: "List the tables run_sql_query can read, with a one-line description each. " +
 			"Pass `tables` to get those tables' columns, types, keys and usage notes.",
 		Annotations: readOnly(),
 	}, listQueryTables)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name:        "update_customer",
 		Description: "Update a customer's email, name, description or metadata. Returns the updated customer.",
 		Annotations: idempotent(),
 	}, updateCustomer)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "finalize_invoice",
 		Description: "Finalize a draft invoice so it can be paid or sent. A finalized invoice can no longer be edited, only voided. " +
 			"If auto_advance is on (the invoice's own setting unless passed), Stripe then charges the customer's payment method or emails the invoice. " +
@@ -97,21 +142,21 @@ func tools(s *mcp.Server) {
 		Annotations: destructive(),
 	}, finalizeInvoice)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "send_invoice",
 		Description: "Email an open invoice to its customer. Only works for invoices with collection_method send_invoice. " +
 			"This emails the customer; confirm with the user first. Returns the invoice.",
 		Annotations: destructive(),
 	}, sendInvoice)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "void_invoice",
 		Description: "Void a finalized invoice so it can never be paid. This can't be undone; confirm with the user first. " +
 			"Returns the invoice.",
 		Annotations: destructive(),
 	}, voidInvoice)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "cancel_subscription",
 		Description: "Cancel a subscription now, or at the end of the current period with at_period_end. " +
 			"Cancelling now can't be undone and stops billing immediately; confirm with the user first. " +
@@ -119,7 +164,7 @@ func tools(s *mcp.Server) {
 		Annotations: destructive(),
 	}, cancelSubscription)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "resume_subscription",
 		Description: "Undo a pending cancellation made with cancel_subscription at_period_end, so the subscription renews. " +
 			"It sets cancel_at_period_end to false and leaves any cancel_at date in place. " +
@@ -127,7 +172,7 @@ func tools(s *mcp.Server) {
 		Annotations: idempotent(),
 	}, resumeSubscription)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "update_subscription",
 		Description: "Update a subscription's metadata or trial end. Changing trial_end moves the billing cycle anchor " +
 			"and can add proration items to the next invoice; \"now\" ends the trial and invoices immediately. " +
@@ -136,33 +181,33 @@ func tools(s *mcp.Server) {
 		Annotations: destructive(),
 	}, updateSubscription)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "create_coupon",
 		Description: "Create a coupon with either percent_off or amount_off plus currency. " +
 			"To give customers a code to type, create a promotion code for it with create_promotion_code. Returns the coupon.",
 		Annotations: mutating(),
 	}, createCoupon)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "delete_coupon",
 		Description: "Delete a coupon so it can't be redeemed again; existing discounts stay. " +
 			"This can't be undone; confirm with the user first.",
 		Annotations: destructive(),
 	}, deleteCoupon)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name:        "create_promotion_code",
 		Description: "Create a customer-facing promotion code for a coupon. Returns the promotion code, including its promo_ ID.",
 		Annotations: mutating(),
 	}, createPromotionCode)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name:        "update_promotion_code",
 		Description: "Activate or deactivate a promotion code, or change its metadata. Returns the promotion code.",
 		Annotations: idempotent(),
 	}, updatePromotionCode)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "create_refund",
 		Description: "Refund a payment intent or charge, in full or for part of the amount. " +
 			"This returns money to the customer and can't be undone; confirm with the user first, including the payment and amount. " +
@@ -170,20 +215,20 @@ func tools(s *mcp.Server) {
 		Annotations: destructive(),
 	}, createRefund)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name:        "update_product",
 		Description: "Update a product's name, description, active state, default price or metadata. Returns the product.",
 		Annotations: idempotent(),
 	}, updateProduct)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name: "update_price",
 		Description: "Update a price's active state, nickname, lookup key or metadata. A price's amount can't change; " +
 			"archive it and create a new one instead. Returns the price.",
 		Annotations: idempotent(),
 	}, updatePrice)
 
-	add(s, &mcp.Tool{
+	add(r, &mcp.Tool{
 		Name:        "update_feature",
 		Description: "Update an entitlement feature's name, active state or metadata. Returns the feature.",
 		Annotations: idempotent(),
@@ -192,14 +237,18 @@ func tools(s *mcp.Server) {
 
 // add registers a tool whose handler receives the request's Env. An Out of
 // any gives the tool no output schema.
-func add[In, Out any](s *mcp.Server, tool *mcp.Tool, h func(context.Context, *Env, In) (*mcp.CallToolResult, Out, error)) {
+func add[In, Out any](r registry, tool *mcp.Tool, h func(context.Context, *Env, In) (*mcp.CallToolResult, Out, error)) {
+	if r.readOnly && (tool.Annotations == nil || !tool.Annotations.ReadOnlyHint) {
+		return
+	}
+
 	t := *tool
 	t.InputSchema = schemaFor[In](t.Name)
 	if reflect.TypeFor[Out]().Kind() != reflect.Interface {
 		t.OutputSchema = schemaFor[Out](t.Name)
 	}
 
-	mcp.AddTool(s, &t, func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, Out, error) {
+	mcp.AddTool(r.s, &t, func(ctx context.Context, _ *mcp.CallToolRequest, in In) (*mcp.CallToolResult, Out, error) {
 		env, err := envFrom(ctx)
 		if err != nil {
 			var zero Out
