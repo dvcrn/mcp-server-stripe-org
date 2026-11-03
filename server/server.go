@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/google/jsonschema-go/jsonschema"
@@ -26,6 +28,38 @@ func New() *mcp.Server { return fullServer() }
 // NewReadOnly returns the MCP server with only the tools annotated read-only.
 func NewReadOnly() *mcp.Server { return readOnlyServer() }
 
+// StdioServer returns the server for stdio, which has no token: the
+// read-only one when MCP_READ_ONLY is set, otherwise the full one.
+func StdioServer(getenv func(string) string) (*mcp.Server, error) {
+	readOnly, err := readOnlyFromEnv(getenv)
+	if err != nil {
+		return nil, err
+	}
+
+	if readOnly {
+		return NewReadOnly(), nil
+	}
+
+	return New(), nil
+}
+
+// readOnlyFromEnv reports whether MCP_READ_ONLY limits the server to the
+// read-only tools. A value that isn't a boolean is an error, so a typo
+// can't silently allow writes.
+func readOnlyFromEnv(getenv func(string) string) (bool, error) {
+	v := strings.TrimSpace(getenv(EnvReadOnly))
+	if v == "" {
+		return false, nil
+	}
+
+	readOnly, err := strconv.ParseBool(v)
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean such as 1 or 0, got %q", EnvReadOnly, v)
+	}
+
+	return readOnly, nil
+}
+
 func newServer(readOnly bool) *mcp.Server {
 	s := mcp.NewServer(&mcp.Implementation{Name: "stripe-org", Version: "0.1.0"}, nil)
 	tools(registry{s, readOnly})
@@ -33,8 +67,8 @@ func newServer(readOnly bool) *mcp.Server {
 	return s
 }
 
-// registry is the server tools are added to. A read-only registry drops
-// every tool not annotated read-only, so the read set follows the annotations.
+// registry is the server tools are added to. A read-only registry skips
+// every tool not annotated read-only.
 type registry struct {
 	s        *mcp.Server
 	readOnly bool

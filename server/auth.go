@@ -7,17 +7,16 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-// requireToken lets a request through only when it carries MCP_TOKEN, which
-// gets every tool, or MCP_READ_TOKEN, which gets the read-only tools, and puts
-// the matching server into the request context for serverFrom. MCP_READ_ONLY
-// limits MCP_TOKEN to the read-only tools too. A missing or ambiguous token
-// setup is a server error, so a missing secret never opens the server.
+// requireToken lets a request through only when it carries MCP_TOKEN (every
+// tool) or MCP_READ_TOKEN (read-only tools), and stores the matching server
+// in the request context for serverFrom. MCP_READ_ONLY limits MCP_TOKEN to
+// the read-only tools too. No token, equal tokens or an invalid MCP_READ_ONLY
+// is a server error, so a missing secret never opens the server.
 func requireToken(getenv func(string) string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		full := strings.TrimSpace(getenv(EnvToken))
@@ -74,38 +73,6 @@ func serverFrom(r *http.Request) *mcp.Server {
 	srv, _ := r.Context().Value(serverKey{}).(*mcp.Server)
 
 	return srv
-}
-
-// StdioServer returns the server for stdio, which has no token: the
-// read-only one when MCP_READ_ONLY is set, otherwise the full one.
-func StdioServer(getenv func(string) string) (*mcp.Server, error) {
-	readOnly, err := readOnlyFromEnv(getenv)
-	if err != nil {
-		return nil, err
-	}
-
-	if readOnly {
-		return NewReadOnly(), nil
-	}
-
-	return New(), nil
-}
-
-// readOnlyFromEnv reports whether MCP_READ_ONLY limits the server to the
-// read-only tools. A value that isn't a boolean is an error, so a typo
-// can't silently allow writes.
-func readOnlyFromEnv(getenv func(string) string) (bool, error) {
-	v := strings.TrimSpace(getenv(EnvReadOnly))
-	if v == "" {
-		return false, nil
-	}
-
-	readOnly, err := strconv.ParseBool(v)
-	if err != nil {
-		return false, fmt.Errorf("%s must be a boolean such as 1 or 0, got %q", EnvReadOnly, v)
-	}
-
-	return readOnly, nil
 }
 
 func providedToken(r *http.Request) string {

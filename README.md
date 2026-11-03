@@ -131,6 +131,8 @@ mise run worker-accounts   # uploads accounts.json as STRIPE_ACCOUNTS
 wrangler deploy
 ```
 
+To revoke the read token, run `wrangler secret delete MCP_READ_TOKEN`; removing it from your secret store doesn't remove it from the worker.
+
 Run `mise run worker-accounts` again whenever `accounts.json` changes. The new list takes effect without a redeploy.
 
 `wrangler deploy` builds the Go wasm bundle through `mise run build-worker`. The MCP endpoint is `https://<worker>.<subdomain>.workers.dev/mcp`, and requests without the `MCP_TOKEN` or `MCP_READ_TOKEN` bearer token are rejected.

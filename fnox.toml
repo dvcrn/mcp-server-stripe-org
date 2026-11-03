@@ -12,4 +12,4 @@ MCP_TOKEN = { provider = "1password", value = "op://cloud-dev/mcp-server-stripe-
 STRIPE_ORG_KEY = { provider = "1password", value = "op://Dev/Stripe - digital-vibes-org - Cloudflare Stripe proxy/credential" }
 MCP_TOKEN = { provider = "1password", value = "op://Dev/mcp-server-stripe-org-prod/password" }
 # Optional: worker-secrets uploads it only when this item exists.
-MCP_READ_TOKEN = { provider = "1password", value = "op://Dev/mcp-server-stripe-org-prod-readonly/password" }
+MCP_READ_TOKEN = { provider = "1password", value = "op://Dev/mcp-server-stripe-org-prod-readonly/password", if_missing = "ignore" }
