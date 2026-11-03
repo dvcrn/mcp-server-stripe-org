@@ -170,11 +170,13 @@ func scoreOperation(op *Operation, terms []string) int {
 	return total
 }
 
-var pathParamPattern = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
+var pathParamPattern = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
 
-// ValidPathParam reports whether v is accepted as a path parameter by BuildPath.
-func ValidPathParam(v string) bool {
-	return pathParamPattern.MatchString(v)
+// validPathParam reports whether v is accepted as a path parameter by BuildPath.
+// Dots are allowed for custom IDs such as gold.monthly, but . and .. would be
+// dot segments that change the request path.
+func validPathParam(v string) bool {
+	return pathParamPattern.MatchString(v) && v != "." && v != ".."
 }
 
 // IsV2 reports whether the operation is a /v2 endpoint, which DoV2 serves.
@@ -183,8 +185,9 @@ func (op Operation) IsV2() bool {
 }
 
 // BuildPath fills the operation's path template with params. Every declared
-// parameter must be present and match ^[A-Za-z0-9_-]+$, and no undeclared
-// parameter is accepted, so a value can never add or change path segments.
+// parameter must be present, match ^[A-Za-z0-9._-]+$ and not be . or ..,
+// and no undeclared parameter is accepted, so a value can never add or change
+// path segments.
 func (op Operation) BuildPath(params map[string]string) (string, error) {
 	for name := range params {
 		if !slices.Contains(op.PathParams, name) {
@@ -199,8 +202,8 @@ func (op Operation) BuildPath(params map[string]string) (string, error) {
 			return "", fmt.Errorf("%s needs path parameter %q", op.ID, name)
 		}
 
-		if !ValidPathParam(value) {
-			return "", fmt.Errorf("%s: path parameter %q must match ^[A-Za-z0-9_-]+$, got %q", op.ID, name, value)
+		if !validPathParam(value) {
+			return "", fmt.Errorf("%s: path parameter %q must match %s and not be . or .., got %q", op.ID, name, pathParamPattern, value)
 		}
 
 		path = strings.Replace(path, "{"+name+"}", url.PathEscape(value), 1)
