@@ -43,9 +43,12 @@ description = "Build and deploy the worker with the active fnox profile"
 run = "fnox exec -- wrangler deploy"
 
 [tasks.worker-secrets]
-description = "Upload STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN to the worker from a fnox profile"
-usage = 'flag "-P --profile <profile>" help="fnox profile to read the secrets from (default: the active profile; a live key needs -P production)"'
-run = 'scripts/worker-secrets.sh ${usage_profile:+-P "$usage_profile"}'
+description = "Upload live secrets (fnox production profile, accounts.json) to the production worker"
+run = "scripts/worker-secrets.sh production"
+
+[tasks.preview-secrets]
+description = "Upload sandbox secrets (active fnox profile, accounts.sandbox.json) to the Workers Previews base config"
+run = "scripts/worker-secrets.sh preview"
 
 [tasks.worker-accounts]
 description = "Upload accounts.json to the worker as the STRIPE_ACCOUNTS secret"

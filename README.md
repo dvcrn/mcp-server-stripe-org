@@ -7,6 +7,12 @@ This MCP server solves the problem that
 - API token auth against mcp.stripe.com works only for a single product
 - The official mcp.stripe.com OAuth expires very frequently (within a few days), prompting for constant re-auth
 
+Deploy this server directly to [MCP Nest](https://mcpnest.dev)
+
+<a href="https://mcpnest.dev/deploy?server=mcp-server-stripe-org&package-manager=npx&env[STRIPE_ORG_KEY]=&env[STRIPE_ACCOUNTS]=">
+    <img src="https://mcpnest.dev/images/deploy-on-mcpnest.png" alt="Deploy on MCP Nest" height="32" />
+  </a>
+
 ## Setup
 
 The server reads its configuration from environment variables:
