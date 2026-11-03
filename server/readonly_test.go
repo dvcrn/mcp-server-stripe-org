@@ -76,7 +76,7 @@ func wantReadOnlyTools(t *testing.T, tools []*mcp.Tool) {
 func fullReadTools(t *testing.T) []*mcp.Tool {
 	t.Helper()
 
-	all := listToolsHTTP(t, Handler(varsGetenv(map[string]string{EnvToken: testToken})), testToken)
+	all := listToolsHTTP(t, Handler(testGetenv(testToken)), testToken)
 
 	return slices.DeleteFunc(all, func(tool *mcp.Tool) bool { return tool.Annotations == nil || !tool.Annotations.ReadOnlyHint })
 }
@@ -91,7 +91,7 @@ func TestHTTPAccessLevels(t *testing.T) {
 
 	read := listToolsHTTP(t, both, testReadToken)
 	wantReadOnlyTools(t, read)
-	if len(read) == 0 || !slices.Contains(toolNames(read), "run_sql_query") {
+	if !slices.Contains(toolNames(read), "run_sql_query") {
 		t.Errorf("read-only tools = %v, want run_sql_query among them", toolNames(read))
 	}
 

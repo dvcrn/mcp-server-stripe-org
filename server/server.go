@@ -77,7 +77,7 @@ type registry struct {
 func tools(r registry) {
 	add(r, &mcp.Tool{
 		Name:        "list_accounts",
-		Description: "List the Stripe accounts this server can read and write, with the alias to pass as `account` to other tools and whether the key is live or sandbox.",
+		Description: "List the Stripe accounts this server can act on, with the alias to pass as `account` to other tools and whether the key is live or sandbox.",
 		Annotations: readOnly(),
 	}, listAccounts)
 
