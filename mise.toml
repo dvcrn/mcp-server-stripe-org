@@ -2,6 +2,7 @@
 go = "1.26.3"
 wrangler = "4.156.1"
 jq = "1.8.1"
+goreleaser = "2.19.0"
 
 # CLOUDFLARE_ACCOUNT_ID comes from fnox.cloud.toml (cloud profile) in cloud sessions
 # and from the gitignored mise.local.toml on local machines.
@@ -61,6 +62,10 @@ unformatted="$(gofmt -l .)"
 if [ -n "$unformatted" ]; then echo "gofmt needed:"; echo "$unformatted"; exit 1; fi
 GOOS=js GOARCH=wasm go build -o /dev/null ./cmd/mcp-worker
 """
+
+[tasks.release-check]
+description = "Validate the GoReleaser config and build a local snapshot into dist/"
+run = ["goreleaser check", "goreleaser release --snapshot --clean"]
 
 [tasks.probe]
 description = "Probe the Stripe org key's permissions without changing anything"

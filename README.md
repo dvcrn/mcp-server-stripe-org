@@ -1,36 +1,75 @@
 # mcp-server-stripe-org
 
-An MCP server for a Stripe organization, written in Go. Read tools: `list_accounts`, `search_api_operations`, `get_api_operation`, `api_read`. Analytics tools: `run_sql_query`, `get_query_run`, `list_query_tables`. Write tools cover customers, invoices, subscriptions, coupons, promotion codes, refunds, products, prices and features. Tools take an `account` alias from `list_accounts`, and only the accounts in `STRIPE_ACCOUNTS` are reachable.
+MCP server for an entire Stripe organization spanning multiple 'accounts', written in Go.
 
-It runs as the Cloudflare Worker `mcp-server-stripe-org` at https://mcp-server-stripe-org.dsh.workers.dev, where `/mcp` requires `Authorization: Bearer $MCP_TOKEN`. The toolchain is pinned in `mise.toml`, so use `mise run` and `mise install`.
+This MCP server solves the problem that
 
-## Configuration
+- API token auth against mcp.stripe.com works only for a single product
+- The official mcp.stripe.com OAuth expires very frequently (within a few days), prompting for constant re-auth
 
-Secrets come from fnox, so run commands under `fnox exec`. The server needs `STRIPE_ORG_KEY` and `STRIPE_ACCOUNTS`, and the HTTP endpoint also needs `MCP_TOKEN`. The cloud profile (`fnox.cloud.toml`) defines all three: select it with `-P cloud` or `FNOX_PROFILE=cloud`. The default and `production` profiles in `fnox.toml` define only `STRIPE_ORG_KEY`, so add the other two there before using them.
+## Setup
+
+Install the pinned toolchain (Go, wrangler, jq) with [mise](https://mise.jdx.dev):
+
+```sh
+mise install
+```
+
+The server reads its configuration from environment variables:
+
+| Variable          | Required for | Value                                                                         |
+| ----------------- | ------------ | ----------------------------------------------------------------------------- |
+| `STRIPE_ORG_KEY`  | always       | A Stripe organization key: `sk_org_live_`, `sk_org_test_` or an `rk_org_` key |
+| `STRIPE_ACCOUNTS` | always       | JSON array of the accounts the tools may act on (see below)                   |
+| `MCP_TOKEN`       | HTTP only    | Bearer token clients must send in `Authorization: Bearer <token>`             |
+
+`STRIPE_ACCOUNTS` lists each account with a lowercase alias, a display name and its `acct_` ID:
+
+```json
+[
+  { "alias": "shop", "name": "My Shop", "account": "acct_123" },
+  { "alias": "saas", "name": "My SaaS", "account": "acct_456" }
+]
+```
+
+Tools refer to accounts by alias or `acct_` ID, and reject any account not in the list.
 
 ## Run locally
 
 ```sh
-fnox exec -- go run ./cmd/mcp                # MCP over stdio
-fnox exec -- go run ./cmd/mcp -http :8080    # MCP over HTTP at /mcp
-mise run dev                                 # the worker under wrangler dev, with a .dev.vars written from the active profile
+go run ./cmd/mcp                # MCP over stdio
+go run ./cmd/mcp -http :8080    # MCP over HTTP at http://localhost:8080/mcp
 ```
 
-## Deploy
+To run the worker build locally under `wrangler dev`, put the three variables in a gitignored `.dev.vars` file and run:
 
 ```sh
-mise run deploy          # build and deploy the worker (needs CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID)
-mise run worker-secrets  # upload STRIPE_ORG_KEY, STRIPE_ACCOUNTS and MCP_TOKEN from the active profile
+wrangler dev
 ```
 
-`worker-secrets` fails if any of the three is empty in the profile, and refuses a live key unless you pass `-P production`.
+## Run on Cloudflare Workers
 
-## Use from Claude Code
-
-`.mcp.json` registers the HTTP endpoint as `stripe-org` and reads the bearer token from `MCP_TOKEN`. Pass only that token to Claude Code, from a profile that defines it such as the cloud profile, so the Stripe org key stays out of the agent's environment:
+Log in with `wrangler login` (or set `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`), set the secrets, then deploy:
 
 ```sh
-MCP_TOKEN="$(fnox -P cloud get MCP_TOKEN)" claude
+wrangler secret put STRIPE_ORG_KEY
+wrangler secret put STRIPE_ACCOUNTS
+wrangler secret put MCP_TOKEN
+wrangler deploy
 ```
 
-The token must match the `MCP_TOKEN` last uploaded with `mise run worker-secrets`. Claude Code asks once to approve the project server.
+`wrangler deploy` builds the Go wasm bundle through `mise run build-worker`. The MCP endpoint is `https://<worker>.<subdomain>.workers.dev/mcp`, and requests without the `MCP_TOKEN` bearer token are rejected.
+
+To use it from Claude Code, add it to `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "stripe-org": {
+      "type": "http",
+      "url": "https://<worker>.<subdomain>.workers.dev/mcp",
+      "headers": { "Authorization": "Bearer ${MCP_TOKEN}" }
+    }
+  }
+}
+```

@@ -1,0 +1,27 @@
+{
+  "name": "mcp-server-stripe-org",
+  "version": "0.0.0",
+  "description": "MCP server for Stripe organizations: one org API key across all connected accounts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dvcrn/mcp-server-stripe-org.git",
+    "directory": "npm"
+  },
+  "files": [
+    "index.js",
+    "postinstall.js",
+    "update_check.js"
+  ],
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "bin": {
+    "mcp-server-stripe-org": "index.js"
+  },
+  "dependencies": {
+    "semver": "^7.7.4"
+  }
+}

@@ -4,3 +4,7 @@ build/
 node_modules/
 .wrangler/
 mise.local.toml
+dist/
+npm/node_modules/
+npm/mcp-server-stripe-org
+npm/mcp-server-stripe-org.exe

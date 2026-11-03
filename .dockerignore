@@ -1,0 +1,10 @@
+# Allowlist the Go sources so fnox files, .dev.vars and build output never enter the build context.
+*
+!go.mod
+!go.sum
+!cmd/
+!internal/
+!server/
+!stripe/
+**/*_test.go
+**/testdata/
