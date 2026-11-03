@@ -203,7 +203,7 @@ func (op Operation) BuildPath(params map[string]string) (string, error) {
 		}
 
 		if !validPathParam(value) {
-			return "", fmt.Errorf("%s: path parameter %q must match ^[A-Za-z0-9._-]+$ and not be . or .., got %q", op.ID, name, value)
+			return "", fmt.Errorf("%s: path parameter %q must match %s and not be . or .., got %q", op.ID, name, pathParamPattern, value)
 		}
 
 		path = strings.Replace(path, "{"+name+"}", url.PathEscape(value), 1)
