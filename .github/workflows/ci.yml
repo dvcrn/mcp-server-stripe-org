@@ -2,8 +2,12 @@ name: CI
 
 on:
   pull_request:
+    paths-ignore: &docs
+      - "**.md"
+      - accounts.example.json
   push:
     branches: [main]
+    paths-ignore: *docs
 
 permissions:
   contents: read

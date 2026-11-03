@@ -1,0 +1,4 @@
+[
+  { "alias": "shop", "name": "My Shop", "account": "acct_123" },
+  { "alias": "saas", "name": "My SaaS", "account": "acct_456" }
+]

@@ -8,3 +8,4 @@ dist/
 npm/node_modules/
 npm/mcp-server-stripe-org
 npm/mcp-server-stripe-org.exe
+accounts.json
