@@ -169,10 +169,16 @@ func TestBuildPath(t *testing.T) {
 		t.Errorf("got %q, %v", got, err)
 	}
 
+	plan, _ := LookupOperation("GetPlansPlan")
+	if got, err := plan.BuildPath(map[string]string{"plan": "gold.monthly"}); err != nil || got != "/v1/plans/gold.monthly" {
+		t.Errorf("GetPlansPlan: got %q, %v", got, err)
+	}
+
 	for _, params := range []map[string]string{
 		nil,
 		{"account_id": "acct_DUMMY"},
 		{"account_id": "acct_DUMMY", "id": ""},
+		{"account_id": "acct_DUMMY", "id": "."},
 		{"account_id": "acct_DUMMY", "id": ".."},
 		{"account_id": "acct_DUMMY", "id": "a/b"},
 		{"account_id": "acct_DUMMY", "id": "a%2Fb"},

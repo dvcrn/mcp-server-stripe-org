@@ -197,6 +197,13 @@ func TestWriteRequests(t *testing.T) {
 			},
 		},
 		{
+			tool:       "delete_coupon",
+			args:       map[string]any{"coupon": "gold.monthly"},
+			wantMethod: "DELETE",
+			wantPath:   "/v1/coupons/gold.monthly",
+			wantForm:   url.Values{},
+		},
+		{
 			tool:       "create_coupon",
 			args:       map[string]any{"amount_off": 500, "currency": "usd"},
 			wantMethod: "POST",
@@ -358,7 +365,8 @@ func TestWriteValidation(t *testing.T) {
 		{"trial_end hex", "update_subscription", map[string]any{"account": "dummy-one", "subscription": "sub_1", "trial_end": "0x10"}, "trial_end must be"},
 		{"trial_end overflow", "update_subscription", map[string]any{"account": "dummy-one", "subscription": "sub_1", "trial_end": "99999999999999999999"}, "trial_end must be"},
 		{"coupon ID with percent sign", "create_coupon", map[string]any{"account": "dummy-one", "id": "25%OFF", "percent_off": 25}, "only letters, digits, _ and -"},
-		{"coupon ID with space", "create_coupon", map[string]any{"account": "dummy-one", "id": "SUMMER 25", "percent_off": 25}, "delete_coupon"},
+		{"coupon ID with dot", "create_coupon", map[string]any{"account": "dummy-one", "id": "gold.monthly", "percent_off": 25}, "only letters, digits, _ and -"},
+		{"coupon ID with space", "create_coupon", map[string]any{"account": "dummy-one", "id": "SUMMER 25", "percent_off": 25}, "only letters, digits, _ and -"},
 		{"coupon without discount", "create_coupon", map[string]any{"account": "dummy-one"}, "exactly one of percent_off or amount_off"},
 		{"coupon with both discounts", "create_coupon", map[string]any{"account": "dummy-one", "percent_off": 10, "amount_off": 100, "currency": "usd"}, "exactly one of"},
 		{"coupon percent over 100", "create_coupon", map[string]any{"account": "dummy-one", "percent_off": 101}, "at most 100"},
