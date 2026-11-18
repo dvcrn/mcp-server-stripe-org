@@ -2,6 +2,7 @@
   "name": "mcp-server-stripe-org",
   "version": "0.0.0",
   "description": "MCP server for Stripe organizations: one org API key across all connected accounts",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dvcrn/mcp-server-stripe-org.git",
